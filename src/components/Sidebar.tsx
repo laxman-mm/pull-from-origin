@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,14 +13,21 @@ const recentPosts = [
   { title: "Chocolate Chip Cookie Skillet", slug: "chocolate-chip-cookie-skillet" }
 ];
 
+// Fallback tags in case database fetch fails
+const fallbackTags = [
+  "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
+  "Dessert", "Quick Meals", "Healthy", "Comfort Food"
+];
+
 export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
-  const [popularTags, setPopularTags] = useState<string[]>([]);
+  const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
   
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        console.log('Attempting to fetch tags from database...');
         const { data, error } = await supabase
           .from('tags')
           .select('name')
@@ -30,25 +36,22 @@ export function Sidebar() {
         
         if (error) {
           console.error('Error fetching tags:', error);
-          // Fallback to hardcoded tags if there's an error
-          setPopularTags([
-            "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
-            "Dessert", "Quick Meals", "Healthy", "Comfort Food"
-          ]);
+          // Keep fallback tags if there's an error
+          setPopularTags(fallbackTags);
+        } else if (data && data.length > 0) {
+          console.log('Successfully fetched tags:', data);
+          const tagNames = data
+            .map(tag => tag.name)
+            .filter(Boolean) as string[];
+          setPopularTags(tagNames.length > 0 ? tagNames : fallbackTags);
         } else {
-          const tagNames = data.map(tag => tag.name).filter(Boolean) as string[];
-          setPopularTags(tagNames.length > 0 ? tagNames : [
-            "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
-            "Dessert", "Quick Meals", "Healthy", "Comfort Food"
-          ]);
+          console.log('No tags found in database, using fallback');
+          setPopularTags(fallbackTags);
         }
       } catch (error) {
-        console.error('Error fetching tags:', error);
-        // Fallback to hardcoded tags
-        setPopularTags([
-          "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
-          "Dessert", "Quick Meals", "Healthy", "Comfort Food"
-        ]);
+        console.error('Unexpected error fetching tags:', error);
+        // Use fallback tags on any unexpected error
+        setPopularTags(fallbackTags);
       }
     };
 
