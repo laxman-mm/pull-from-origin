@@ -1,15 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Search, Tag } from "lucide-react";
-
-const popularTags = [
-  "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
-  "Dessert", "Quick Meals", "Healthy", "Comfort Food"
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const recentPosts = [
   { title: "Creamy Garlic Parmesan Pasta", slug: "creamy-garlic-parmesan-pasta" },
@@ -21,6 +17,43 @@ const recentPosts = [
 export function Sidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
+  const [popularTags, setPopularTags] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tags')
+          .select('name')
+          .not('name', 'is', null)
+          .limit(10);
+        
+        if (error) {
+          console.error('Error fetching tags:', error);
+          // Fallback to hardcoded tags if there's an error
+          setPopularTags([
+            "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
+            "Dessert", "Quick Meals", "Healthy", "Comfort Food"
+          ]);
+        } else {
+          const tagNames = data.map(tag => tag.name).filter(Boolean) as string[];
+          setPopularTags(tagNames.length > 0 ? tagNames : [
+            "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
+            "Dessert", "Quick Meals", "Healthy", "Comfort Food"
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+        // Fallback to hardcoded tags
+        setPopularTags([
+          "Breakfast", "Lunch", "Dinner", "Vegan", "Vegetarian", 
+          "Dessert", "Quick Meals", "Healthy", "Comfort Food"
+        ]);
+      }
+    };
+
+    fetchTags();
+  }, []);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
