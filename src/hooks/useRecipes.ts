@@ -16,7 +16,7 @@ export interface Recipe {
   trending: boolean;
   created_at: string;
   updated_at: string;
-  published_at: boolean;
+  published_at: string | null;
   ingredients: any;
   instructions: any;
   nutrition_calories: number;
@@ -75,7 +75,7 @@ export const useRecipes = () => {
             )
           )
         `)
-        .eq('published_at', true);
+        .not('published_at', 'is', null);
 
       // Apply category filter if provided
       if (categoryFilter) {
