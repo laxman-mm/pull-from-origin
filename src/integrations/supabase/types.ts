@@ -479,45 +479,6 @@ export type Database = {
           },
         ]
       }
-      categories_products_lnk: {
-        Row: {
-          category_id: number | null
-          category_ord: number | null
-          id: number
-          product_id: number | null
-          product_ord: number | null
-        }
-        Insert: {
-          category_id?: number | null
-          category_ord?: number | null
-          id?: number
-          product_id?: number | null
-          product_ord?: number | null
-        }
-        Update: {
-          category_id?: number | null
-          category_ord?: number | null
-          id?: number
-          product_id?: number | null
-          product_ord?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "categories_products_lnk_fk"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "categories_products_lnk_ifk"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       components_shared_media: {
         Row: {
           id: number
@@ -900,102 +861,6 @@ export type Database = {
           },
         ]
       }
-      products: {
-        Row: {
-          created_at: string | null
-          created_by_id: number | null
-          description: string | null
-          document_id: string | null
-          id: number
-          locale: string | null
-          name: string | null
-          published_at: string | null
-          slug: string | null
-          updated_at: string | null
-          updated_by_id: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by_id?: number | null
-          description?: string | null
-          document_id?: string | null
-          id?: number
-          locale?: string | null
-          name?: string | null
-          published_at?: string | null
-          slug?: string | null
-          updated_at?: string | null
-          updated_by_id?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by_id?: number | null
-          description?: string | null
-          document_id?: string | null
-          id?: number
-          locale?: string | null
-          name?: string | null
-          published_at?: string | null
-          slug?: string | null
-          updated_at?: string | null
-          updated_by_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_created_by_id_fk"
-            columns: ["created_by_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_updated_by_id_fk"
-            columns: ["updated_by_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products_tags_lnk: {
-        Row: {
-          id: number
-          product_id: number | null
-          product_ord: number | null
-          tag_id: number | null
-          tag_ord: number | null
-        }
-        Insert: {
-          id?: number
-          product_id?: number | null
-          product_ord?: number | null
-          tag_id?: number | null
-          tag_ord?: number | null
-        }
-        Update: {
-          id?: number
-          product_id?: number | null
-          product_ord?: number | null
-          tag_id?: number | null
-          tag_ord?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_tags_lnk_fk"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_tags_lnk_ifk"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           created_at: string
@@ -1022,6 +887,213 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      receipes: {
+        Row: {
+          cook_time_in_min: number | null
+          created_at: string | null
+          created_by_id: number | null
+          description: string | null
+          difficulty: string | null
+          document_id: string | null
+          excerpt: string | null
+          featured: boolean | null
+          id: number
+          ingredients: Json | null
+          instructions: Json | null
+          locale: string | null
+          nutrition_calories: number | null
+          nutrition_carbs_in_g: number | null
+          nutrition_fat_in_g: number | null
+          nutrition_protein_in_g: number | null
+          prep_time_in_min: number | null
+          published_at: string | null
+          servings: number | null
+          slug: string | null
+          title: string | null
+          trending: boolean | null
+          updated_at: string | null
+          updated_by_id: number | null
+        }
+        Insert: {
+          cook_time_in_min?: number | null
+          created_at?: string | null
+          created_by_id?: number | null
+          description?: string | null
+          difficulty?: string | null
+          document_id?: string | null
+          excerpt?: string | null
+          featured?: boolean | null
+          id?: number
+          ingredients?: Json | null
+          instructions?: Json | null
+          locale?: string | null
+          nutrition_calories?: number | null
+          nutrition_carbs_in_g?: number | null
+          nutrition_fat_in_g?: number | null
+          nutrition_protein_in_g?: number | null
+          prep_time_in_min?: number | null
+          published_at?: string | null
+          servings?: number | null
+          slug?: string | null
+          title?: string | null
+          trending?: boolean | null
+          updated_at?: string | null
+          updated_by_id?: number | null
+        }
+        Update: {
+          cook_time_in_min?: number | null
+          created_at?: string | null
+          created_by_id?: number | null
+          description?: string | null
+          difficulty?: string | null
+          document_id?: string | null
+          excerpt?: string | null
+          featured?: boolean | null
+          id?: number
+          ingredients?: Json | null
+          instructions?: Json | null
+          locale?: string | null
+          nutrition_calories?: number | null
+          nutrition_carbs_in_g?: number | null
+          nutrition_fat_in_g?: number | null
+          nutrition_protein_in_g?: number | null
+          prep_time_in_min?: number | null
+          published_at?: string | null
+          servings?: number | null
+          slug?: string | null
+          title?: string | null
+          trending?: boolean | null
+          updated_at?: string | null
+          updated_by_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipes_created_by_id_fk"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipes_updated_by_id_fk"
+            columns: ["updated_by_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipes_admin_user_lnk: {
+        Row: {
+          id: number
+          receipe_id: number | null
+          user_id: number | null
+        }
+        Insert: {
+          id?: number
+          receipe_id?: number | null
+          user_id?: number | null
+        }
+        Update: {
+          id?: number
+          receipe_id?: number | null
+          user_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipes_admin_user_lnk_fk"
+            columns: ["receipe_id"]
+            isOneToOne: false
+            referencedRelation: "receipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipes_admin_user_lnk_ifk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipes_categories_lnk: {
+        Row: {
+          category_id: number | null
+          category_ord: number | null
+          id: number
+          receipe_id: number | null
+          receipe_ord: number | null
+        }
+        Insert: {
+          category_id?: number | null
+          category_ord?: number | null
+          id?: number
+          receipe_id?: number | null
+          receipe_ord?: number | null
+        }
+        Update: {
+          category_id?: number | null
+          category_ord?: number | null
+          id?: number
+          receipe_id?: number | null
+          receipe_ord?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipes_categories_lnk_fk"
+            columns: ["receipe_id"]
+            isOneToOne: false
+            referencedRelation: "receipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipes_categories_lnk_ifk"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipes_tags_lnk: {
+        Row: {
+          id: number
+          receipe_id: number | null
+          receipe_ord: number | null
+          tag_id: number | null
+          tag_ord: number | null
+        }
+        Insert: {
+          id?: number
+          receipe_id?: number | null
+          receipe_ord?: number | null
+          tag_id?: number | null
+          tag_ord?: number | null
+        }
+        Update: {
+          id?: number
+          receipe_id?: number | null
+          receipe_ord?: number | null
+          tag_id?: number | null
+          tag_ord?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipes_tags_lnk_fk"
+            columns: ["receipe_id"]
+            isOneToOne: false
+            referencedRelation: "receipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipes_tags_lnk_ifk"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       strapi_api_token_permissions: {
         Row: {

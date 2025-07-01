@@ -4,30 +4,27 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Sidebar } from "@/components/Sidebar";
-import { recipes } from "@/data/recipes";
 import { Clock, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useRecipes } from "@/hooks/useRecipes";
 
 const Recipes = () => {
   const { t } = useLanguage();
+  const { recipes, categories, loading, error, refetchRecipes } = useRecipes();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
   
-  // Get all categories and difficulties
-  const allCategories = Array.from(new Set(recipes.map(recipe => recipe.category)));
-  const allDifficulties = Array.from(new Set(recipes.map(recipe => recipe.difficulty)));
+  // Get all unique difficulties from recipes
+  const allDifficulties = Array.from(new Set(recipes.map(recipe => recipe.difficulty).filter(Boolean)));
   
-  // Filter recipes based on search, category and difficulty
+  // Filter recipes based on search query
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = searchQuery === "" || 
       recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
       
-    const matchesCategory = !activeCategory || recipe.category === activeCategory;
-    const matchesDifficulty = !activeDifficulty || recipe.difficulty === activeDifficulty;
-    
-    return matchesSearch && matchesCategory && matchesDifficulty;
+    return matchesSearch;
   });
   
   // Format date
@@ -39,12 +36,16 @@ const Recipes = () => {
     });
   };
   
-  const handleCategoryClick = (category: string) => {
-    setActiveCategory(prev => prev === category ? null : category);
+  const handleCategoryClick = (categorySlug: string) => {
+    const newCategory = activeCategory === categorySlug ? null : categorySlug;
+    setActiveCategory(newCategory);
+    refetchRecipes(newCategory || undefined, activeDifficulty || undefined);
   };
   
   const handleDifficultyClick = (difficulty: string) => {
-    setActiveDifficulty(prev => prev === difficulty ? null : difficulty);
+    const newDifficulty = activeDifficulty === difficulty ? null : difficulty;
+    setActiveDifficulty(newDifficulty);
+    refetchRecipes(activeCategory || undefined, newDifficulty || undefined);
   };
   
   // Ensure the Google Translate is applied to dynamically loaded content
@@ -68,6 +69,41 @@ const Recipes = () => {
       }
     }
   }, [filteredRecipes.length]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg">Loading recipes...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-red-600 mb-4">Error loading recipes: {error}</p>
+            <button 
+              onClick={() => refetchRecipes()}
+              className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80"
+            >
+              Try Again
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -119,17 +155,17 @@ const Recipes = () => {
                 <div className="mb-4">
                   <h3 className="font-medium mb-2">{t("categories")}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {allCategories.map(category => (
+                    {categories.map(category => (
                       <button
-                        key={category}
-                        onClick={() => handleCategoryClick(category)}
+                        key={category.id}
+                        onClick={() => handleCategoryClick(category.slug)}
                         className={`text-xs px-3 py-1 rounded-full ${
-                          activeCategory === category 
+                          activeCategory === category.slug 
                             ? 'bg-primary text-primary-foreground' 
                             : 'bg-secondary hover:bg-secondary/70'
                         }`}
                       >
-                        {category}
+                        {category.name}
                       </button>
                     ))}
                   </div>
@@ -166,6 +202,7 @@ const Recipes = () => {
                     onClick={() => {
                       setActiveCategory(null);
                       setActiveDifficulty(null);
+                      refetchRecipes();
                     }}
                     className="text-primary text-sm hover:underline"
                   >
@@ -181,7 +218,7 @@ const Recipes = () => {
                     <div key={recipe.id} className="recipe-card group">
                       <div className="recipe-card-image-container">
                         <img 
-                          src={recipe.image} 
+                          src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
                           alt={recipe.title} 
                           className="recipe-card-image"
                         />
@@ -189,11 +226,11 @@ const Recipes = () => {
                       <div className="p-5">
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                           <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
-                            {recipe.category}
+                            {recipe.categories?.[0]?.name || 'Recipe'}
                           </span>
                           <span className="flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
-                            {recipe.prepTime + recipe.cookTime} {t("minutes")}
+                            {(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}
                           </span>
                         </div>
                         <h3 className="font-playfair font-semibold text-lg mb-2">
@@ -201,18 +238,18 @@ const Recipes = () => {
                             {recipe.title}
                           </Link>
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <img 
-                              src={recipe.author.avatar} 
-                              alt={recipe.author.name} 
+                              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                              alt="Author" 
                               className="w-6 h-6 rounded-full object-cover mr-2" 
                             />
-                            <span className="text-xs">{recipe.author.name}</span>
+                            <span className="text-xs">Chef</span>
                           </div>
-                          <time className="text-xs text-muted-foreground" dateTime={recipe.publishedAt}>
-                            {formatDate(recipe.publishedAt)}
+                          <time className="text-xs text-muted-foreground" dateTime={recipe.published_at}>
+                            {formatDate(recipe.published_at)}
                           </time>
                         </div>
                       </div>
@@ -235,17 +272,17 @@ const Recipes = () => {
                 <div className="bg-card p-6 rounded-md border border-border mb-8">
                   <h3 className="font-medium mb-4">{t("filter_by_category")}</h3>
                   <div className="space-y-2">
-                    {allCategories.map(category => (
+                    {categories.map(category => (
                       <button
-                        key={category}
-                        onClick={() => handleCategoryClick(category)}
+                        key={category.id}
+                        onClick={() => handleCategoryClick(category.slug)}
                         className={`block w-full text-left px-3 py-2 rounded ${
-                          activeCategory === category 
+                          activeCategory === category.slug 
                             ? 'bg-primary text-primary-foreground' 
                             : 'hover:bg-secondary text-foreground'
                         }`}
                       >
-                        {category}
+                        {category.name}
                       </button>
                     ))}
                   </div>
