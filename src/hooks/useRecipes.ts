@@ -14,6 +14,7 @@ export interface Recipe {
   servings: number;
   featured: boolean;
   trending: boolean;
+  editors_pick: boolean;
   created_at: string;
   updated_at: string;
   published_at: string | null;
