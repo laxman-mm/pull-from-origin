@@ -59,6 +59,7 @@ export const useRecipes = () => {
           servings,
           featured,
           trending,
+          editors_pick,
           created_at,
           updated_at,
           published_at,
