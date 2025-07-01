@@ -1,30 +1,93 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { recipes } from "@/data/recipes";
 import { Sidebar } from "@/components/Sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Clock, User } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useRecipes } from "@/hooks/useRecipes";
 
 const Index = () => {
   const { t } = useLanguage();
-  
+  const { recipes, loading, error } = useRecipes();
+  const [filteredRecipes, setFilteredRecipes] = useState(recipes);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  // Update filtered recipes when recipes change or tag filter is applied
+  useEffect(() => {
+    if (activeTag) {
+      // Filter recipes based on active tag - this is a simple implementation
+      // In a real app, you'd want to have a proper tag relationship
+      const filtered = recipes.filter(recipe => 
+        recipe.title.toLowerCase().includes(activeTag.toLowerCase()) ||
+        recipe.description.toLowerCase().includes(activeTag.toLowerCase()) ||
+        recipe.categories?.some(cat => cat.name.toLowerCase().includes(activeTag.toLowerCase()))
+      );
+      setFilteredRecipes(filtered);
+    } else {
+      setFilteredRecipes(recipes);
+    }
+  }, [recipes, activeTag]);
+
+  // Handle tag filter from sidebar
+  const handleTagFilter = (tagName: string) => {
+    if (activeTag === tagName) {
+      setActiveTag(null); // Clear filter if same tag clicked
+    } else {
+      setActiveTag(tagName);
+    }
+  };
+
+  // Clear tag filter
+  const clearTagFilter = () => {
+    setActiveTag(null);
+  };
+
   // Get featured, trending and editor's picks recipes
-  const featuredRecipes = recipes.filter(recipe => recipe.featured);
-  const trendingRecipes = recipes.filter(recipe => recipe.trending);
-  const editorsPickRecipes = recipes.filter(recipe => recipe.editorsPick);
+  const featuredRecipes = filteredRecipes.filter(recipe => recipe.featured);
+  const trendingRecipes = filteredRecipes.filter(recipe => recipe.trending);
+  const editorsPickRecipes = filteredRecipes.filter(recipe => recipe.editors_pick);
 
   // Format date
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg">Loading recipes...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-red-600 mb-4">Error loading recipes: {error}</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -36,7 +99,7 @@ const Index = () => {
           <section className="relative h-[500px] md:h-[600px] overflow-hidden">
             <div 
               className="absolute inset-0 bg-cover bg-center" 
-              style={{ backgroundImage: `url(${featuredRecipes[0].image})` }}
+              style={{ backgroundImage: `url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80')` }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
@@ -50,16 +113,16 @@ const Index = () => {
                   {featuredRecipes[0].title}
                 </h1>
                 <p className="text-sm md:text-base opacity-90 mb-6">
-                  {featuredRecipes[0].excerpt}
+                  {featuredRecipes[0].excerpt || featuredRecipes[0].description}
                 </p>
                 <div className="flex items-center text-sm mb-6">
                   <div className="flex items-center mr-4">
                     <Clock className="h-4 w-4 mr-1" />
-                    <span>{featuredRecipes[0].prepTime + featuredRecipes[0].cookTime} {t("minutes")}</span>
+                    <span>{(featuredRecipes[0].prep_time_in_min || 0) + (featuredRecipes[0].cook_time_in_min || 0)} {t("minutes")}</span>
                   </div>
                   <div className="flex items-center">
                     <User className="h-4 w-4 mr-1" />
-                    <span>{t("by")} {featuredRecipes[0].author.name}</span>
+                    <span>{t("by")} Chef</span>
                   </div>
                 </div>
                 <Link 
@@ -78,6 +141,23 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
+              {/* Active Tag Filter Display */}
+              {activeTag && (
+                <div className="mb-8 p-4 bg-primary/10 rounded-md border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">
+                      Showing recipes filtered by: <strong>{activeTag}</strong>
+                    </span>
+                    <button
+                      onClick={clearTagFilter}
+                      className="text-primary text-sm hover:underline"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Recent Recipes */}
               <section className="mb-16">
                 <div className="flex items-baseline justify-between mb-8">
@@ -88,38 +168,38 @@ const Index = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {recipes.slice(0, 4).map((recipe) => (
+                  {filteredRecipes.slice(0, 4).map((recipe) => (
                     <div key={recipe.id} className="recipe-card group">
                       <div className="recipe-card-image-container">
                         <img 
-                          src={recipe.image} 
+                          src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
                           alt={recipe.title} 
                           className="recipe-card-image"
                         />
                         <div className="absolute top-3 left-3">
                           <span className="bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded font-medium">
-                            {recipe.category}
+                            {recipe.categories?.[0]?.name || 'Recipe'}
                           </span>
                         </div>
                       </div>
                       <div className="p-5">
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                          <time dateTime={recipe.publishedAt}>{formatDate(recipe.publishedAt)}</time>
-                          <span>{recipe.prepTime + recipe.cookTime} {t("minutes")}</span>
+                          <time dateTime={recipe.published_at || ''}>{formatDate(recipe.published_at)}</time>
+                          <span>{(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}</span>
                         </div>
                         <h3 className="font-playfair font-semibold text-lg mb-2">
                           <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
                             {recipe.title}
                           </Link>
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
                         <div className="flex items-center">
                           <img 
-                            src={recipe.author.avatar} 
-                            alt={recipe.author.name} 
+                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                            alt="Chef" 
                             className="w-8 h-8 rounded-full object-cover mr-2" 
                           />
-                          <span className="text-xs">{t("by")} {recipe.author.name}</span>
+                          <span className="text-xs">{t("by")} Chef</span>
                         </div>
                       </div>
                     </div>
@@ -128,87 +208,91 @@ const Index = () => {
               </section>
               
               {/* Trending Now */}
-              <section className="mb-16">
-                <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-8">
-                  {t("trending_now")}
-                </h2>
-                
-                <div className="space-y-6">
-                  {trendingRecipes.slice(0, 3).map((recipe) => (
-                    <div key={recipe.id} className="flex flex-col md:flex-row gap-5 recipe-card p-0">
-                      <div className="md:w-1/3 recipe-card-image-container rounded-t-md md:rounded-l-md md:rounded-tr-none">
-                        <img 
-                          src={recipe.image} 
-                          alt={recipe.title}
-                          className="recipe-card-image" 
-                        />
-                      </div>
-                      <div className="md:w-2/3 p-5">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                          <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
-                            {recipe.category}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {recipe.prepTime + recipe.cookTime} {t("minutes")}
-                          </span>
-                        </div>
-                        <h3 className="font-playfair font-semibold text-lg mb-2">
-                          <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
-                            {recipe.title}
-                          </Link>
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-4">{recipe.excerpt}</p>
-                        <div className="flex items-center">
+              {trendingRecipes.length > 0 && (
+                <section className="mb-16">
+                  <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-8">
+                    {t("trending_now")}
+                  </h2>
+                  
+                  <div className="space-y-6">
+                    {trendingRecipes.slice(0, 3).map((recipe) => (
+                      <div key={recipe.id} className="flex flex-col md:flex-row gap-5 recipe-card p-0">
+                        <div className="md:w-1/3 recipe-card-image-container rounded-t-md md:rounded-l-md md:rounded-tr-none">
                           <img 
-                            src={recipe.author.avatar} 
-                            alt={recipe.author.name} 
-                            className="w-6 h-6 rounded-full object-cover mr-2" 
+                            src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                            alt={recipe.title}
+                            className="recipe-card-image" 
                           />
-                          <span className="text-xs">{recipe.author.name}</span>
+                        </div>
+                        <div className="md:w-2/3 p-5">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
+                              {recipe.categories?.[0]?.name || 'Recipe'}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}
+                            </span>
+                          </div>
+                          <h3 className="font-playfair font-semibold text-lg mb-2">
+                            <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
+                              {recipe.title}
+                            </Link>
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-4">{recipe.excerpt || recipe.description}</p>
+                          <div className="flex items-center">
+                            <img 
+                              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+                              alt="Chef" 
+                              className="w-6 h-6 rounded-full object-cover mr-2" 
+                            />
+                            <span className="text-xs">Chef</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div>
+                </section>
+              )}
               
               {/* Editor's Picks */}
-              <section>
-                <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-8">
-                  {t("editors_picks")}
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {editorsPickRecipes.slice(0, 3).map((recipe) => (
-                    <div key={recipe.id} className="recipe-card">
-                      <div className="recipe-card-image-container">
-                        <img 
-                          src={recipe.image} 
-                          alt={recipe.title} 
-                          className="recipe-card-image"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-playfair font-semibold text-base mb-2 line-clamp-2">
-                          <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
-                            {recipe.title}
-                          </Link>
-                        </h3>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{recipe.difficulty}</span>
-                          <span>{recipe.prepTime + recipe.cookTime} {t("minutes")}</span>
+              {editorsPickRecipes.length > 0 && (
+                <section>
+                  <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-8">
+                    {t("editors_picks")}
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {editorsPickRecipes.slice(0, 3).map((recipe) => (
+                      <div key={recipe.id} className="recipe-card">
+                        <div className="recipe-card-image-container">
+                          <img 
+                            src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                            alt={recipe.title} 
+                            className="recipe-card-image"
+                          />
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-playfair font-semibold text-base mb-2 line-clamp-2">
+                            <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
+                              {recipe.title}
+                            </Link>
+                          </h3>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{recipe.difficulty || 'Medium'}</span>
+                            <span>{(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
             
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <Sidebar />
+              <Sidebar onTagFilter={handleTagFilter} activeTag={activeTag} />
             </div>
           </div>
         </div>

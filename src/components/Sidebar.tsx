@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,12 @@ const fallbackTags = [
   "Dessert", "Quick Meals", "Healthy", "Comfort Food"
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onTagFilter?: (tagName: string) => void;
+  activeTag?: string | null;
+}
+
+export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
@@ -71,6 +77,12 @@ export function Sidebar() {
     setEmail("");
     // Show toast notification (in a real implementation)
   };
+
+  const handleTagClick = (tagName: string) => {
+    if (onTagFilter) {
+      onTagFilter(tagName);
+    }
+  };
   
   return (
     <aside className="space-y-8">
@@ -111,19 +123,23 @@ export function Sidebar() {
         </ul>
       </div>
       
-      {/* Popular Tags */}
+      {/* Popular Tags - Now works as filters */}
       <div className="bg-card p-6 rounded-md border border-border">
         <h3 className="font-playfair text-lg font-medium mb-4">Popular Tags</h3>
         <div className="flex flex-wrap gap-2">
           {popularTags.map((tag) => (
-            <Link 
+            <button 
               key={tag} 
-              to={`/tags/${tag.toLowerCase()}`}
-              className="bg-secondary hover:bg-primary hover:text-primary-foreground transition-colors text-xs px-3 py-1 rounded-full inline-flex items-center"
+              onClick={() => handleTagClick(tag)}
+              className={`text-xs px-3 py-1 rounded-full inline-flex items-center transition-colors ${
+                activeTag === tag 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary hover:bg-primary hover:text-primary-foreground'
+              }`}
             >
               <Tag className="h-3 w-3 mr-1" />
               {tag}
-            </Link>
+            </button>
           ))}
         </div>
       </div>

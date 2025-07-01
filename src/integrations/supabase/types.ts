@@ -896,6 +896,7 @@ export type Database = {
           description: string | null
           difficulty: string | null
           document_id: string | null
+          editors_pick: boolean | null
           excerpt: string | null
           featured: boolean | null
           id: number
@@ -922,6 +923,7 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           document_id?: string | null
+          editors_pick?: boolean | null
           excerpt?: string | null
           featured?: boolean | null
           id?: number
@@ -948,6 +950,7 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           document_id?: string | null
+          editors_pick?: boolean | null
           excerpt?: string | null
           featured?: boolean | null
           id?: number
