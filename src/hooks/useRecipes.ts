@@ -25,6 +25,7 @@ export interface Recipe {
   nutrition_carbs_in_g: number;
   nutrition_fat_in_g: number;
   categories?: { id: number; name: string; slug: string }[];
+  image_url?: string; // Add image URL property
 }
 
 export interface Category {
@@ -44,7 +45,7 @@ export const useRecipes = () => {
     try {
       setLoading(true);
       
-      // Build the query
+      // Build the query with proper joins to get recipe images
       let query = supabase
         .from('receipes')
         .select(`
@@ -89,21 +90,50 @@ export const useRecipes = () => {
         query = query.eq('difficulty', difficultyFilter);
       }
 
-      const { data, error } = await query;
+      const { data: recipesData, error: recipesError } = await query;
 
-      if (error) {
-        console.error('Error fetching recipes:', error);
-        setError(error.message);
+      if (recipesError) {
+        console.error('Error fetching recipes:', recipesError);
+        setError(recipesError.message);
         return;
       }
 
-      // Transform the data to match our Recipe interface
-      const transformedRecipes = data?.map((recipe: any) => ({
-        ...recipe,
-        categories: recipe.receipes_categories_lnk?.map((link: any) => link.categories) || []
-      })) || [];
+      // Now fetch images for each recipe
+      const recipesWithImages = await Promise.all(
+        (recipesData || []).map(async (recipe: any) => {
+          // Fetch the image for this recipe through the join table
+          const { data: imageData, error: imageError } = await supabase
+            .from('files_related_mph')
+            .select(`
+              files!inner(
+                url,
+                alternative_text,
+                name
+              )
+            `)
+            .eq('related_id', recipe.id)
+            .eq('related_type', 'api::receipe.receipe')
+            .eq('field', 'image')
+            .limit(1)
+            .single();
 
-      setRecipes(transformedRecipes);
+          let imageUrl = null;
+          if (!imageError && imageData?.files?.url) {
+            // Construct full URL if it's a relative path
+            imageUrl = imageData.files.url.startsWith('http') 
+              ? imageData.files.url 
+              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${imageData.files.url}`;
+          }
+
+          return {
+            ...recipe,
+            categories: recipe.receipes_categories_lnk?.map((link: any) => link.categories) || [],
+            image_url: imageUrl
+          };
+        })
+      );
+
+      setRecipes(recipesWithImages);
       setError(null);
     } catch (err) {
       console.error('Unexpected error fetching recipes:', err);

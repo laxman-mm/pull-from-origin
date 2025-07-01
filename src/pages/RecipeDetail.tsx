@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -29,34 +30,12 @@ interface Recipe {
   nutrition_carbs_in_g: number;
   nutrition_fat_in_g: number;
   categories?: { id: number; name: string; slug: string }[];
+  image_url?: string;
 }
 
-// Recipe placeholder images based on category/type
-const getRecipeImage = (recipe: Recipe) => {
-  if (recipe.title.toLowerCase().includes('pasta') || recipe.title.toLowerCase().includes('italian')) {
-    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('pizza')) {
-    return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('pancake') || recipe.title.toLowerCase().includes('breakfast')) {
-    return 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('salad') || recipe.title.toLowerCase().includes('healthy')) {
-    return 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('burger') || recipe.title.toLowerCase().includes('sandwich')) {
-    return 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('cake') || recipe.title.toLowerCase().includes('dessert') || recipe.title.toLowerCase().includes('cookie')) {
-    return 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('soup')) {
-    return 'https://images.unsplash.com/photo-1559181567-c3190ca9959b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('steak') || recipe.title.toLowerCase().includes('meat') || recipe.title.toLowerCase().includes('beef')) {
-    return 'https://images.unsplash.com/photo-1574484284002-952d92456975?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('sushi') || recipe.title.toLowerCase().includes('asian')) {
-    return 'https://images.unsplash.com/photo-1563379091339-03246963d321?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else if (recipe.title.toLowerCase().includes('taco') || recipe.title.toLowerCase().includes('mexican')) {
-    return 'https://images.unsplash.com/photo-1572441713132-51c75654db73?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  } else {
-    // Default food image
-    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-  }
+// Fallback image for recipes without images
+const getFallbackImage = () => {
+  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
 };
 
 const RecipeDetail = () => {
@@ -132,10 +111,35 @@ const RecipeDetail = () => {
 
         console.log('Fetched recipe data:', data);
 
+        // Fetch the image for this recipe
+        const { data: imageData, error: imageError } = await supabase
+          .from('files_related_mph')
+          .select(`
+            files!inner(
+              url,
+              alternative_text,
+              name
+            )
+          `)
+          .eq('related_id', data.id)
+          .eq('related_type', 'api::receipe.receipe')
+          .eq('field', 'image')
+          .limit(1)
+          .single();
+
+        let imageUrl = null;
+        if (!imageError && imageData?.files?.url) {
+          // Construct full URL if it's a relative path
+          imageUrl = imageData.files.url.startsWith('http') 
+            ? imageData.files.url 
+            : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${imageData.files.url}`;
+        }
+
         // Transform the data to match our Recipe interface
         const transformedRecipe = {
           ...data,
-          categories: data.receipes_categories_lnk?.map((link: any) => link.categories) || []
+          categories: data.receipes_categories_lnk?.map((link: any) => link.categories) || [],
+          image_url: imageUrl
         };
 
         setRecipe(transformedRecipe);
@@ -206,7 +210,7 @@ const RecipeDetail = () => {
         <section className="relative h-[400px] md:h-[500px] overflow-hidden">
           <div 
             className="absolute inset-0 bg-cover bg-center" 
-            style={{ backgroundImage: `url('${getRecipeImage(recipe)}')` }}
+            style={{ backgroundImage: `url('${recipe.image_url || getFallbackImage()}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           </div>

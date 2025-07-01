@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -6,6 +7,18 @@ import { Sidebar } from "@/components/Sidebar";
 import { Clock, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRecipes } from "@/hooks/useRecipes";
+
+// Fallback image for recipes without images
+const getFallbackImage = (index: number) => {
+  const fallbackImages = [
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+  ];
+  return fallbackImages[index % fallbackImages.length];
+};
 
 const Recipes = () => {
   const { t } = useLanguage();
@@ -213,11 +226,11 @@ const Recipes = () => {
             {/* Recipe Grid */}
             {filteredRecipes.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredRecipes.map((recipe) => (
+                {filteredRecipes.map((recipe, index) => (
                   <div key={recipe.id} className="recipe-card group">
                     <div className="recipe-card-image-container">
                       <img 
-                        src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                        src={recipe.image_url || getFallbackImage(index)} 
                         alt={recipe.title} 
                         className="recipe-card-image"
                       />
