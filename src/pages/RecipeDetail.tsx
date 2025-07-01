@@ -38,6 +38,18 @@ const RecipeDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Helper function to extract text from structured content
+  const extractTextFromContent = (content: any[]): string[] => {
+    if (!content || !Array.isArray(content)) return [];
+    
+    return content.map(item => {
+      if (item.children && Array.isArray(item.children)) {
+        return item.children.map((child: any) => child.text || '').join('');
+      }
+      return item.text || '';
+    }).filter(text => text.trim() !== '');
+  };
+  
   useEffect(() => {
     const fetchRecipe = async () => {
       if (!slug) {
@@ -48,6 +60,7 @@ const RecipeDetail = () => {
 
       try {
         setIsLoading(true);
+        console.log('Fetching recipe with slug:', slug);
         
         const { data, error } = await supabase
           .from('receipes')
@@ -89,6 +102,8 @@ const RecipeDetail = () => {
           setError(error.message);
           return;
         }
+
+        console.log('Fetched recipe data:', data);
 
         // Transform the data to match our Recipe interface
         const transformedRecipe = {
@@ -150,6 +165,10 @@ const RecipeDetail = () => {
       </div>
     );
   }
+
+  // Extract ingredients and instructions text
+  const ingredientsList = extractTextFromContent(recipe.ingredients);
+  const instructionsList = extractTextFromContent(recipe.instructions);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -247,8 +266,8 @@ const RecipeDetail = () => {
                 <div className="mb-8">
                   <h2 className="font-playfair text-2xl font-semibold mb-4">Ingredients</h2>
                   <ul className="space-y-2">
-                    {recipe.ingredients && Array.isArray(recipe.ingredients) ? (
-                      recipe.ingredients.map((ingredient: string, index: number) => (
+                    {ingredientsList.length > 0 ? (
+                      ingredientsList.map((ingredient: string, index: number) => (
                         <li key={index} className="flex items-baseline">
                           <span className="w-2 h-2 rounded-full bg-primary mr-3 mt-1.5"></span>
                           <span>{ingredient}</span>
@@ -267,8 +286,8 @@ const RecipeDetail = () => {
                 <div className="mb-8">
                   <h2 className="font-playfair text-2xl font-semibold mb-4">Instructions</h2>
                   <ol className="space-y-6">
-                    {recipe.instructions && Array.isArray(recipe.instructions) ? (
-                      recipe.instructions.map((instruction: string, index: number) => (
+                    {instructionsList.length > 0 ? (
+                      instructionsList.map((instruction: string, index: number) => (
                         <li key={index} className="flex">
                           <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium mr-4">
                             {index + 1}
