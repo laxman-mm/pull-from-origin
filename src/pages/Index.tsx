@@ -9,6 +9,48 @@ import { Clock, User } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRecipes } from "@/hooks/useRecipes";
 
+// Recipe placeholder images based on category/type
+const getRecipeImage = (recipe: any, index: number) => {
+  const images = [
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // pasta/italian
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // pizza
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // pancakes/breakfast
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // salad/healthy
+    'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // burger/american
+    'https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // dessert/cake
+    'https://images.unsplash.com/photo-1559181567-c3190ca9959b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // soup
+    'https://images.unsplash.com/photo-1574484284002-952d92456975?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // steak/meat
+    'https://images.unsplash.com/photo-1563379091339-03246963d321?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // sushi/asian
+    'https://images.unsplash.com/photo-1572441713132-51c75654db73?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80', // tacos/mexican
+  ];
+  
+  // Use different logic to assign images based on recipe content
+  if (recipe.title.toLowerCase().includes('pasta') || recipe.title.toLowerCase().includes('italian')) {
+    return images[0];
+  } else if (recipe.title.toLowerCase().includes('pizza')) {
+    return images[1];
+  } else if (recipe.title.toLowerCase().includes('pancake') || recipe.title.toLowerCase().includes('breakfast')) {
+    return images[2];
+  } else if (recipe.title.toLowerCase().includes('salad') || recipe.title.toLowerCase().includes('healthy')) {
+    return images[3];
+  } else if (recipe.title.toLowerCase().includes('burger') || recipe.title.toLowerCase().includes('sandwich')) {
+    return images[4];
+  } else if (recipe.title.toLowerCase().includes('cake') || recipe.title.toLowerCase().includes('dessert') || recipe.title.toLowerCase().includes('cookie')) {
+    return images[5];
+  } else if (recipe.title.toLowerCase().includes('soup')) {
+    return images[6];
+  } else if (recipe.title.toLowerCase().includes('steak') || recipe.title.toLowerCase().includes('meat') || recipe.title.toLowerCase().includes('beef')) {
+    return images[7];
+  } else if (recipe.title.toLowerCase().includes('sushi') || recipe.title.toLowerCase().includes('asian')) {
+    return images[8];
+  } else if (recipe.title.toLowerCase().includes('taco') || recipe.title.toLowerCase().includes('mexican')) {
+    return images[9];
+  } else {
+    // Fallback to cycling through images based on index
+    return images[index % images.length];
+  }
+};
+
 const Index = () => {
   const { t } = useLanguage();
   const { recipes, loading, error } = useRecipes();
@@ -18,8 +60,6 @@ const Index = () => {
   // Update filtered recipes when recipes change or tag filter is applied
   useEffect(() => {
     if (activeTag) {
-      // Filter recipes based on active tag - this is a simple implementation
-      // In a real app, you'd want to have a proper tag relationship
       const filtered = recipes.filter(recipe => 
         recipe.title.toLowerCase().includes(activeTag.toLowerCase()) ||
         recipe.description.toLowerCase().includes(activeTag.toLowerCase()) ||
@@ -31,26 +71,22 @@ const Index = () => {
     }
   }, [recipes, activeTag]);
 
-  // Handle tag filter from sidebar
   const handleTagFilter = (tagName: string) => {
     if (activeTag === tagName) {
-      setActiveTag(null); // Clear filter if same tag clicked
+      setActiveTag(null);
     } else {
       setActiveTag(tagName);
     }
   };
 
-  // Clear tag filter
   const clearTagFilter = () => {
     setActiveTag(null);
   };
 
-  // Get featured, trending and editor's picks recipes
   const featuredRecipes = filteredRecipes.filter(recipe => recipe.featured);
   const trendingRecipes = filteredRecipes.filter(recipe => recipe.trending);
   const editorsPickRecipes = filteredRecipes.filter(recipe => recipe.editors_pick);
 
-  // Format date
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -99,7 +135,7 @@ const Index = () => {
           <section className="relative h-[500px] md:h-[600px] overflow-hidden">
             <div 
               className="absolute inset-0 bg-cover bg-center" 
-              style={{ backgroundImage: `url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80')` }}
+              style={{ backgroundImage: `url('${getRecipeImage(featuredRecipes[0], 0)}')` }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             </div>
@@ -168,11 +204,11 @@ const Index = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredRecipes.slice(0, 4).map((recipe) => (
+                  {filteredRecipes.slice(0, 4).map((recipe, index) => (
                     <div key={recipe.id} className="recipe-card group">
                       <div className="recipe-card-image-container">
                         <img 
-                          src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                          src={getRecipeImage(recipe, index)} 
                           alt={recipe.title} 
                           className="recipe-card-image"
                         />
@@ -215,11 +251,11 @@ const Index = () => {
                   </h2>
                   
                   <div className="space-y-6">
-                    {trendingRecipes.slice(0, 3).map((recipe) => (
+                    {trendingRecipes.slice(0, 3).map((recipe, index) => (
                       <div key={recipe.id} className="flex flex-col md:flex-row gap-5 recipe-card p-0">
                         <div className="md:w-1/3 recipe-card-image-container rounded-t-md md:rounded-l-md md:rounded-tr-none">
                           <img 
-                            src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                            src={getRecipeImage(recipe, index)} 
                             alt={recipe.title}
                             className="recipe-card-image" 
                           />
@@ -263,11 +299,11 @@ const Index = () => {
                   </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {editorsPickRecipes.slice(0, 3).map((recipe) => (
+                    {editorsPickRecipes.slice(0, 3).map((recipe, index) => (
                       <div key={recipe.id} className="recipe-card">
                         <div className="recipe-card-image-container">
                           <img 
-                            src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" 
+                            src={getRecipeImage(recipe, index)} 
                             alt={recipe.title} 
                             className="recipe-card-image"
                           />
