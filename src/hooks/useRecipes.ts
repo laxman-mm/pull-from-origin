@@ -16,7 +16,7 @@ export interface Recipe {
   trending: boolean;
   created_at: string;
   updated_at: string;
-  published_at: string;
+  published_at: boolean;
   ingredients: any;
   instructions: any;
   nutrition_calories: number;
