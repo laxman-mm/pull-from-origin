@@ -69,7 +69,7 @@ export const useRecipes = () => {
       }
 
       // Transform the data to match our Recipe interface
-      const transformedRecipes = Array.isArray(recipesData) ? (recipesData as any[]).map((recipe: any) => ({
+      const transformedRecipes = Array.isArray(recipesData) ? recipesData.map((recipe: any) => ({
         ...recipe,
         categories: Array.isArray(recipe.categories) ? recipe.categories : [],
         image_url: recipe.image_url ? (
