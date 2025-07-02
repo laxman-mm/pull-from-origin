@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Clock, User, Users, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Comments } from "@/components/Comments";
 
 interface Recipe {
   id: number;
@@ -433,89 +434,7 @@ const RecipeDetail = () => {
               
               {/* Comments Section */}
               <div className="bg-card p-6 md:p-8 rounded-md border border-border">
-                <h2 className="font-playfair text-2xl font-semibold mb-6">Comments</h2>
-                
-                {/* Comment form */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-medium mb-4">Leave a comment</h3>
-                  <form className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label htmlFor="name" className="text-sm font-medium block">Name*</label>
-                        <input 
-                          id="name"
-                          type="text" 
-                          className="w-full p-2 border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="email" className="text-sm font-medium block">Email* (will not be published)</label>
-                        <input 
-                          id="email"
-                          type="email" 
-                          className="w-full p-2 border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="comment" className="text-sm font-medium block">Comment*</label>
-                      <textarea 
-                        id="comment"
-                        className="w-full p-2 border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary min-h-[120px]"
-                        required
-                      ></textarea>
-                    </div>
-                    <button 
-                      type="submit" 
-                      className="btn-primary"
-                    >
-                      Post Comment
-                    </button>
-                  </form>
-                </div>
-                
-                {/* Sample comments */}
-                <div className="space-y-8">
-                  <article className="border-b border-border pb-6">
-                    <div className="flex items-center mb-4">
-                      <img 
-                        src="https://i.pravatar.cc/150?img=7" 
-                        alt="Sarah Johnson"
-                        className="w-10 h-10 rounded-full object-cover mr-3" 
-                      />
-                      <div>
-                        <h4 className="text-sm font-medium">Sarah Johnson</h4>
-                        <time className="text-xs text-muted-foreground">
-                          April 18, 2024
-                        </time>
-                      </div>
-                    </div>
-                    <p className="text-sm">
-                      I made this recipe last weekend and it was absolutely delicious! The flavors were perfectly balanced and my whole family loved it. Will definitely be making this again soon!
-                    </p>
-                  </article>
-                  
-                  <article>
-                    <div className="flex items-center mb-4">
-                      <img 
-                        src="https://i.pravatar.cc/150?img=8" 
-                        alt="Michael Thompson"
-                        className="w-10 h-10 rounded-full object-cover mr-3" 
-                      />
-                      <div>
-                        <h4 className="text-sm font-medium">Michael Thompson</h4>
-                        <time className="text-xs text-muted-foreground">
-                          April 15, 2024
-                        </time>
-                      </div>
-                    </div>
-                    <p className="text-sm">
-                      Great recipe! I added a little more garlic than called for and it turned out amazing. The instructions were clear and easy to follow. Thanks for sharing!
-                    </p>
-                  </article>
-                </div>
+                <Comments recipeId={recipe.id} />
               </div>
             </div>
             
