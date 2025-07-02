@@ -42,56 +42,24 @@ export const useRecipes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRecipes = async (categoryFilter?: string, difficultyFilter?: string) => {
+  const fetchRecipes = async (
+    categoryFilter?: string, 
+    difficultyFilter?: string,
+    searchQuery?: string,
+    limit = 50,
+    offset = 0
+  ) => {
     try {
       setLoading(true);
       
-      // Build the query with proper joins to get recipe images
-      let query = supabase
-        .from('receipes')
-        .select(`
-          id,
-          title,
-          slug,
-          description,
-          excerpt,
-          difficulty,
-          prep_time_in_min,
-          cook_time_in_min,
-          servings,
-          featured,
-          trending,
-          editors_pick,
-          created_at,
-          updated_at,
-          published_at,
-          ingredients,
-          instructions,
-          nutrition_calories,
-          nutrition_protein_in_g,
-          nutrition_carbs_in_g,
-          nutrition_fat_in_g,
-          receipes_categories_lnk!inner(
-            categories!inner(
-              id,
-              name,
-              slug
-            )
-          )
-        `)
-        .not('published_at', 'is', null);
-
-      // Apply category filter if provided
-      if (categoryFilter) {
-        query = query.eq('receipes_categories_lnk.categories.slug', categoryFilter);
-      }
-
-      // Apply difficulty filter if provided
-      if (difficultyFilter) {
-        query = query.eq('difficulty', difficultyFilter);
-      }
-
-      const { data: recipesData, error: recipesError } = await query;
+      const { data: recipesData, error: recipesError } = await supabase
+        .rpc('search_recipes', {
+          search_query: searchQuery || '',
+          category_filter: categoryFilter || null,
+          difficulty_filter: difficultyFilter || null,
+          limit_count: limit,
+          offset_count: offset
+        });
 
       if (recipesError) {
         console.error('Error fetching recipes:', recipesError);
@@ -99,88 +67,26 @@ export const useRecipes = () => {
         return;
       }
 
-      // Now fetch images and authors for each recipe
-      const recipesWithImagesAndAuthors = await Promise.all(
-        (recipesData || []).map(async (recipe: any) => {
-          // Fetch the image for this recipe through the join table
-          const { data: imageData, error: imageError } = await supabase
-            .from('files_related_mph')
-            .select(`
-              files!inner(
-                url,
-                alternative_text,
-                name
-              )
-            `)
-            .eq('related_id', recipe.id)
-            .eq('related_type', 'api::receipe.receipe')
-            .eq('field', 'image')
-            .limit(1)
-            .single();
+      // Transform the data to match our Recipe interface
+      const transformedRecipes = (recipesData || []).map((recipe: any) => ({
+        ...recipe,
+        categories: Array.isArray(recipe.categories) ? recipe.categories : [],
+        image_url: recipe.image_url ? (
+          recipe.image_url.startsWith('http') 
+            ? recipe.image_url 
+            : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${recipe.image_url}`
+        ) : null,
+        author: recipe.author && Object.keys(recipe.author).length > 0 ? {
+          ...recipe.author,
+          avatar_url: recipe.author.avatar_url ? (
+            recipe.author.avatar_url.startsWith('http')
+              ? recipe.author.avatar_url
+              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${recipe.author.avatar_url}`
+          ) : null
+        } : null
+      }));
 
-          let imageUrl = null;
-          if (!imageError && imageData?.files?.url) {
-            // Construct full URL if it's a relative path
-            imageUrl = imageData.files.url.startsWith('http') 
-              ? imageData.files.url 
-              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${imageData.files.url}`;
-          }
-
-          // Fetch the author for this recipe through the join table
-          const { data: authorData, error: authorError } = await supabase
-            .from('receipes_author_lnk')
-            .select(`
-              authors!inner(
-                id,
-                name,
-                email
-              )
-            `)
-            .eq('receipe_id', recipe.id)
-            .limit(1)
-            .single();
-
-          let author = null;
-          if (!authorError && authorData?.authors) {
-            // Fetch the author's avatar image
-            const { data: authorImageData, error: authorImageError } = await supabase
-              .from('files_related_mph')
-              .select(`
-                files!inner(
-                  url,
-                  alternative_text,
-                  name
-                )
-              `)
-              .eq('related_id', authorData.authors.id)
-              .eq('related_type', 'api::author.author')
-              .eq('field', 'avatar')
-              .limit(1)
-              .single();
-
-            let authorAvatarUrl = null;
-            if (!authorImageError && authorImageData?.files?.url) {
-              authorAvatarUrl = authorImageData.files.url.startsWith('http') 
-                ? authorImageData.files.url 
-                : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${authorImageData.files.url}`;
-            }
-
-            author = {
-              ...authorData.authors,
-              avatar_url: authorAvatarUrl
-            };
-          }
-
-          return {
-            ...recipe,
-            categories: recipe.receipes_categories_lnk?.map((link: any) => link.categories) || [],
-            image_url: imageUrl,
-            author: author
-          };
-        })
-      );
-
-      setRecipes(recipesWithImagesAndAuthors);
+      setRecipes(transformedRecipes);
       setError(null);
     } catch (err) {
       console.error('Unexpected error fetching recipes:', err);

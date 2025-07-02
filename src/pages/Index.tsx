@@ -23,39 +23,27 @@ const getFallbackImage = (index: number) => {
 
 const Index = () => {
   const { t } = useLanguage();
-  const { recipes, loading, error } = useRecipes();
-  const [filteredRecipes, setFilteredRecipes] = useState(recipes);
+  const { recipes, loading, error, refetchRecipes } = useRecipes();
   const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  // Update filtered recipes when recipes change or tag filter is applied
-  useEffect(() => {
-    if (activeTag) {
-      const filtered = recipes.filter(recipe => 
-        recipe.title.toLowerCase().includes(activeTag.toLowerCase()) ||
-        recipe.description.toLowerCase().includes(activeTag.toLowerCase()) ||
-        recipe.categories?.some(cat => cat.name.toLowerCase().includes(activeTag.toLowerCase()))
-      );
-      setFilteredRecipes(filtered);
-    } else {
-      setFilteredRecipes(recipes);
-    }
-  }, [recipes, activeTag]);
 
   const handleTagFilter = (tagName: string) => {
     if (activeTag === tagName) {
       setActiveTag(null);
+      refetchRecipes(); // Clear search
     } else {
       setActiveTag(tagName);
+      refetchRecipes(undefined, undefined, tagName); // Search by tag
     }
   };
 
   const clearTagFilter = () => {
     setActiveTag(null);
+    refetchRecipes();
   };
 
-  const featuredRecipes = filteredRecipes.filter(recipe => recipe.featured);
-  const trendingRecipes = filteredRecipes.filter(recipe => recipe.trending);
-  const editorsPickRecipes = filteredRecipes.filter(recipe => recipe.editors_pick);
+  const featuredRecipes = recipes.filter(recipe => recipe.featured);
+  const trendingRecipes = recipes.filter(recipe => recipe.trending);
+  const editorsPickRecipes = recipes.filter(recipe => recipe.editors_pick);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
@@ -128,7 +116,7 @@ const Index = () => {
                   </div>
                   <div className="flex items-center">
                     <User className="h-4 w-4 mr-1" />
-                    <span>{t("by")} Chef</span>
+                    <span>{t("by")} {featuredRecipes[0].author?.name || "Chef"}</span>
                   </div>
                 </div>
                 <Link 
@@ -174,7 +162,7 @@ const Index = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredRecipes.slice(0, 4).map((recipe, index) => (
+                  {recipes.slice(0, 4).map((recipe, index) => (
                     <div key={recipe.id} className="recipe-card group">
                       <div className="recipe-card-image-container">
                         <img 

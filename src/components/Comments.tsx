@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,7 @@ interface Comment {
   content: string;
   created_at: string;
   user_id: string;
-  profiles?: {
+  user_profile?: {
     full_name: string;
     email: string;
   } | null;
@@ -57,23 +58,16 @@ export function Comments({ recipeId }: CommentsProps) {
   const loadComments = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First get comments
+      const { data: commentsData, error: commentsError } = await supabase
         .from('comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          user_id,
-          profiles (
-            full_name,
-            email
-          )
-        `)
+        .select('id, content, created_at, user_id')
         .eq('recipe_id', recipeId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading comments:', error);
+      if (commentsError) {
+        console.error('Error loading comments:', commentsError);
         toast({
           title: "Error",
           description: "Failed to load comments",
@@ -82,13 +76,29 @@ export function Comments({ recipeId }: CommentsProps) {
         return;
       }
 
-      // Handle the data properly, accounting for potential null profiles
-      const commentsWithProfiles = (data || []).map(comment => ({
-        ...comment,
-        profiles: comment.profiles || null
-      }));
+      // Then get profiles for the user_ids
+      if (commentsData && commentsData.length > 0) {
+        const userIds = commentsData.map(comment => comment.user_id);
+        
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
 
-      setComments(commentsWithProfiles);
+        if (profilesError) {
+          console.error('Error loading profiles:', profilesError);
+        }
+
+        // Combine comments with profiles
+        const commentsWithProfiles = commentsData.map(comment => ({
+          ...comment,
+          user_profile: profilesData?.find(profile => profile.id === comment.user_id) || null
+        }));
+
+        setComments(commentsWithProfiles);
+      } else {
+        setComments([]);
+      }
     } catch (error) {
       console.error('Error loading comments:', error);
     } finally {
@@ -231,16 +241,16 @@ export function Comments({ recipeId }: CommentsProps) {
               <div key={comment.id} className="flex gap-3 p-4 border rounded-lg">
                 <Avatar>
                   <AvatarFallback>
-                    {comment.profiles?.full_name 
-                      ? comment.profiles.full_name.charAt(0).toUpperCase()
-                      : comment.profiles?.email?.charAt(0).toUpperCase() || 'U'
+                    {comment.user_profile?.full_name 
+                      ? comment.user_profile.full_name.charAt(0).toUpperCase()
+                      : comment.user_profile?.email?.charAt(0).toUpperCase() || 'U'
                     }
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
-                      {comment.profiles?.full_name || comment.profiles?.email || 'Anonymous User'}
+                      {comment.user_profile?.full_name || comment.user_profile?.email || 'Anonymous User'}
                     </span>
                     <span className="text-sm text-muted-foreground">
                       {new Date(comment.created_at).toLocaleDateString()}

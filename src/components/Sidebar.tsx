@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Search, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecipes } from "@/hooks/useRecipes";
 
 const recentPosts = [
   { title: "Creamy Garlic Parmesan Pasta", slug: "creamy-garlic-parmesan-pasta" },
@@ -29,6 +30,8 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const { refetchRecipes } = useRecipes();
   
   useEffect(() => {
     const fetchTags = async () => {
@@ -63,11 +66,39 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
 
     fetchTags();
   }, []);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle search logic
-    console.log("Search for:", searchQuery);
+    // Trigger search with current query
+    if (refetchRecipes) {
+      refetchRecipes(undefined, undefined, searchQuery);
+    }
+  };
+
+  const handleSearchInput = (query: string) => {
+    setSearchQuery(query);
+    
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Debounce search
+    const timeout = setTimeout(() => {
+      if (refetchRecipes) {
+        refetchRecipes(undefined, undefined, query);
+      }
+    }, 500);
+    
+    setSearchTimeout(timeout);
   };
   
   const handleSubscribe = (e: React.FormEvent) => {
@@ -94,7 +125,7 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
             type="text"
             placeholder="Search recipes..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchInput(e.target.value)}
             className="rounded-r-none"
           />
           <Button 

@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Sidebar } from "@/components/Sidebar";
 import { Clock, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRecipes } from "@/hooks/useRecipes";
@@ -26,18 +25,25 @@ const Recipes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Get all unique difficulties from recipes
   const allDifficulties = Array.from(new Set(recipes.map(recipe => recipe.difficulty).filter(Boolean)));
   
-  // Filter recipes based on search query
-  const filteredRecipes = recipes.filter(recipe => {
-    const matchesSearch = searchQuery === "" || 
-      recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
-    return matchesSearch;
-  });
+  // Handle search with debouncing
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, query);
+    }, 500); // 500ms delay
+    
+    setSearchTimeout(timeout);
+  };
   
   // Format date
   const formatDate = (dateString: string | null) => {
@@ -52,36 +58,30 @@ const Recipes = () => {
   const handleCategoryClick = (categorySlug: string) => {
     const newCategory = activeCategory === categorySlug ? null : categorySlug;
     setActiveCategory(newCategory);
-    refetchRecipes(newCategory || undefined, activeDifficulty || undefined);
+    refetchRecipes(newCategory || undefined, activeDifficulty || undefined, searchQuery);
   };
   
   const handleDifficultyClick = (difficulty: string) => {
     const newDifficulty = activeDifficulty === difficulty ? null : difficulty;
     setActiveDifficulty(newDifficulty);
-    refetchRecipes(activeCategory || undefined, newDifficulty || undefined);
+    refetchRecipes(activeCategory || undefined, newDifficulty || undefined, searchQuery);
+  };
+
+  const clearAllFilters = () => {
+    setActiveCategory(null);
+    setActiveDifficulty(null);
+    setSearchQuery("");
+    refetchRecipes();
   };
   
-  // Ensure the Google Translate is applied to dynamically loaded content
+  // Clean up timeout on unmount
   useEffect(() => {
-    // If Google Translate exists and has been applied
-    if (document.body.classList.contains('translated-ltr') || document.body.classList.contains('translated-rtl')) {
-      // Trigger a resize event to help Google Translate re-process the page
-      window.dispatchEvent(new Event('resize'));
-      
-      // Force translate the current page again
-      try {
-        const googleFrame = document.querySelector('iframe.goog-te-menu-frame') as HTMLIFrameElement;
-        if (googleFrame && googleFrame.contentDocument) {
-          const translateElements = googleFrame.contentDocument.querySelectorAll('.goog-te-menu2-item');
-          if (translateElements.length) {
-            (translateElements[0] as HTMLElement).click();
-          }
-        }
-      } catch (e) {
-        console.error('Error re-translating page:', e);
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
       }
-    }
-  }, [filteredRecipes.length]);
+    };
+  }, [searchTimeout]);
 
   if (loading) {
     return (
@@ -155,7 +155,7 @@ const Recipes = () => {
                   type="text"
                   placeholder={t("search")}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="w-full p-3 pr-10 border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
@@ -206,16 +206,12 @@ const Recipes = () => {
             {/* Filter Results */}
             <div className="mb-6 flex items-center justify-between">
               <p className="text-muted-foreground text-sm">
-                {t("showing")} {filteredRecipes.length} {t("recipes")}
+                {t("showing")} {recipes.length} {t("recipes")}
               </p>
               
-              {(activeCategory || activeDifficulty) && (
+              {(activeCategory || activeDifficulty || searchQuery) && (
                 <button
-                  onClick={() => {
-                    setActiveCategory(null);
-                    setActiveDifficulty(null);
-                    refetchRecipes();
-                  }}
+                  onClick={clearAllFilters}
                   className="text-primary text-sm hover:underline"
                 >
                   {t("clear_filters")}
@@ -224,9 +220,9 @@ const Recipes = () => {
             </div>
             
             {/* Recipe Grid */}
-            {filteredRecipes.length > 0 ? (
+            {recipes.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredRecipes.map((recipe, index) => (
+                {recipes.map((recipe, index) => (
                   <div key={recipe.id} className="recipe-card group">
                     <div className="recipe-card-image-container">
                       <img 
