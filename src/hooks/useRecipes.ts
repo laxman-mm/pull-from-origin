@@ -52,8 +52,9 @@ export const useRecipes = () => {
     try {
       setLoading(true);
       
+      // Use the PostgreSQL function to search recipes
       const { data: recipesData, error: recipesError } = await supabase
-        .rpc('search_recipes', {
+        .rpc('search_recipes' as any, {
           search_query: searchQuery || '',
           category_filter: categoryFilter || null,
           difficulty_filter: difficultyFilter || null,
@@ -68,7 +69,7 @@ export const useRecipes = () => {
       }
 
       // Transform the data to match our Recipe interface
-      const transformedRecipes = (recipesData || []).map((recipe: any) => ({
+      const transformedRecipes = Array.isArray(recipesData) ? (recipesData as any[]).map((recipe: any) => ({
         ...recipe,
         categories: Array.isArray(recipe.categories) ? recipe.categories : [],
         image_url: recipe.image_url ? (
@@ -84,7 +85,7 @@ export const useRecipes = () => {
               : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${recipe.author.avatar_url}`
           ) : null
         } : null
-      }));
+      })) : [];
 
       setRecipes(transformedRecipes);
       setError(null);
