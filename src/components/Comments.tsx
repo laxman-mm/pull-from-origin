@@ -1,19 +1,20 @@
+
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Auth } from "@/components/Auth";
+import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { Loader2, Trash2 } from "lucide-react";
+import { MessageCircle, Send, LogIn } from "lucide-react";
 
 interface Comment {
   id: string;
   content: string;
   created_at: string;
   user_id: string;
-  profiles: {
+  profiles?: {
     full_name: string;
     email: string;
   };
@@ -24,21 +25,21 @@ interface CommentsProps {
 }
 
 export function Comments({ recipeId }: CommentsProps) {
-  const [user, setUser] = useState<User | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check current user
-    const getUser = async () => {
+    // Check auth state
+    const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
     };
-
-    getUser();
+    
+    checkUser();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -51,210 +52,202 @@ export function Comments({ recipeId }: CommentsProps) {
   }, []);
 
   useEffect(() => {
-    fetchComments();
+    loadComments();
   }, [recipeId]);
 
-  const fetchComments = async () => {
-    setIsLoading(true);
+  const loadComments = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('comments')
         .select(`
           id,
           content,
           created_at,
-          user_id
+          user_id,
+          profiles:user_id (
+            full_name,
+            email
+          )
         `)
         .eq('recipe_id', recipeId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading comments:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load comments",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Fetch profile information for each comment
-      const commentsWithProfiles = await Promise.all(
-        (data || []).map(async (comment) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', comment.user_id)
-            .single();
-
-          return {
-            ...comment,
-            profiles: profile || { full_name: 'Anonymous', email: '' }
-          };
-        })
-      );
-
-      setComments(commentsWithProfiles);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load comments",
-        variant: "destructive"
-      });
+      setComments(data || []);
+    } catch (error) {
+      console.error('Error loading comments:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !newComment.trim()) return;
+  const handleSubmitComment = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to post a comment",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setIsSubmitting(true);
+    if (!newComment.trim()) {
+      toast({
+        title: "Invalid Comment",
+        description: "Please enter a comment",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const { error } = await supabase
         .from('comments')
         .insert({
           recipe_id: recipeId,
           user_id: user.id,
-          content: newComment.trim()
+          content: newComment.trim(),
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error submitting comment:', error);
+        toast({
+          title: "Error",
+          description: "Failed to submit comment. Please make sure you're logged in.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setNewComment("");
-      fetchComments();
+      await loadComments();
       toast({
-        title: "Success!",
-        description: "Your comment has been posted."
+        title: "Success",
+        description: "Comment posted successfully!",
       });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error submitting comment:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', commentId);
-
-      if (error) throw error;
-
-      fetchComments();
-      toast({
-        title: "Success!",
-        description: "Comment deleted."
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+  const handleSignIn = () => {
+    window.location.href = '/auth';
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+  if (loading) {
+    return (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Comments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h2 className="font-playfair text-2xl font-semibold">Comments</h2>
-      
-      {/* Comment form */}
-      {user ? (
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmitComment} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="comment" className="text-sm font-medium">
-                  Leave a comment
-                </label>
-                <Textarea
-                  id="comment"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Share your thoughts about this recipe..."
-                  required
-                  minLength={10}
-                  className="min-h-[100px]"
-                />
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="h-5 w-5" />
+          Comments ({comments.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Comment Form */}
+        {user ? (
+          <div className="space-y-3">
+            <Textarea
+              placeholder="Share your thoughts about this recipe..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              rows={4}
+            />
+            <Button 
+              onClick={handleSubmitComment} 
+              disabled={submitting || !newComment.trim()}
+              className="w-full sm:w-auto"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {submitting ? "Posting..." : "Post Comment"}
+            </Button>
+          </div>
+        ) : (
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-3">
+                <LogIn className="h-8 w-8 mx-auto text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  Sign in to join the conversation and share your thoughts about this recipe.
+                </p>
+                <Button onClick={handleSignIn} variant="outline">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In to Comment
+                </Button>
               </div>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !newComment.trim()}
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Post Comment
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          <p className="text-muted-foreground">
-            Please sign in to leave a comment
-          </p>
-          <Auth onAuthSuccess={fetchComments} />
-        </div>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Comments list */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      ) : comments.length > 0 ? (
+        {/* Comments List */}
         <div className="space-y-4">
-          {comments.map((comment) => (
-            <Card key={comment.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                      {comment.profiles.full_name?.charAt(0).toUpperCase() || comment.profiles.email?.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {comment.profiles.full_name || comment.profiles.email}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(comment.created_at)}
-                      </p>
-                    </div>
+          {comments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No comments yet. Be the first to share your thoughts!</p>
+            </div>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className="flex gap-3 p-4 border rounded-lg">
+                <Avatar>
+                  <AvatarFallback>
+                    {comment.profiles?.full_name 
+                      ? comment.profiles.full_name.charAt(0).toUpperCase()
+                      : comment.profiles?.email?.charAt(0).toUpperCase() || 'U'
+                    }
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {comment.profiles?.full_name || comment.profiles?.email || 'Anonymous User'}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  
-                  {user && user.id === comment.user_id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <p className="text-sm leading-relaxed">{comment.content}</p>
                 </div>
-                
-                <p className="text-sm leading-relaxed">{comment.content}</p>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))
+          )}
         </div>
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            No comments yet. Be the first to share your thoughts!
-          </p>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

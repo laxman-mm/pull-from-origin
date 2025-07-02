@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { AdminLogin } from "@/components/AdminLogin";
-import { AdminSetup } from "@/components/AdminSetup";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +10,6 @@ const Admin = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [needsSetup, setNeedsSetup] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -23,12 +21,9 @@ const Admin = () => {
         
         if (session?.user) {
           await checkAdminStatus(session.user.id);
-        } else {
-          setNeedsSetup(true);
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        setNeedsSetup(true);
       } finally {
         setLoading(false);
       }
@@ -46,7 +41,6 @@ const Admin = () => {
           await checkAdminStatus(session.user.id);
         } else {
           setIsAdmin(false);
-          setNeedsSetup(true);
         }
         setLoading(false);
       }
@@ -74,7 +68,6 @@ const Admin = () => {
           description: `Error checking profile: ${error.message}`,
           variant: "destructive",
         });
-        setNeedsSetup(true);
         return;
       }
 
@@ -82,10 +75,9 @@ const Admin = () => {
         console.log('No profile found for user');
         toast({
           title: "Profile Missing",
-          description: "No profile found. Please complete the setup process.",
+          description: "No profile found. Please contact an administrator to set up your profile.",
           variant: "destructive",
         });
-        setNeedsSetup(true);
         return;
       }
 
@@ -93,22 +85,26 @@ const Admin = () => {
       console.log('User role:', profile.role, 'Is admin:', isUserAdmin);
       
       setIsAdmin(isUserAdmin);
-      setNeedsSetup(false);
 
       if (isUserAdmin) {
         toast({
           title: "Welcome Admin!",
           description: `Logged in as ${profile.email}`,
         });
+      } else {
+        toast({
+          title: "Access Denied",
+          description: "You don't have admin privileges to access this panel.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error in checkAdminStatus:', error);
       toast({
         title: "Setup Error",
-        description: "Failed to verify admin status. Please check the setup process.",
+        description: "Failed to verify admin status.",
         variant: "destructive",
       });
-      setNeedsSetup(true);
     }
   };
 
@@ -148,12 +144,7 @@ const Admin = () => {
     );
   }
 
-  // Show setup if no user or setup is needed
-  if (needsSetup || !user) {
-    return <AdminSetup />;
-  }
-
-  // Show login form if user exists but isn't logged in properly
+  // Show login form if no user is logged in
   if (!user) {
     return <AdminLogin onLogin={handleLogin} />;
   }
@@ -162,10 +153,13 @@ const Admin = () => {
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-4">
-            You don't have admin privileges. Current user: {user.email}
+            You don't have admin privileges to access this panel.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Current user: {user.email}
           </p>
           <div className="space-x-4">
             <button 
@@ -173,12 +167,6 @@ const Admin = () => {
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               Logout
-            </button>
-            <button 
-              onClick={() => setNeedsSetup(true)}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Setup Admin
             </button>
           </div>
         </div>

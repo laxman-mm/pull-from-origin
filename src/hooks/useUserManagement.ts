@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { User, UserFormData } from "@/components/UserManagementTypes";
 
 export function useUserManagement(onStatsUpdate: () => void) {
@@ -22,31 +23,35 @@ export function useUserManagement(onStatsUpdate: () => void) {
 
   const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      setLoading(true);
+      
+      // Use the new backend function to get all users
+      const { data, error } = await supabase.rpc('get_all_users_for_admin');
 
       if (error) {
-        console.error('Error loading users:', error);
+        console.error("Error loading users:", error);
         toast({
           title: "Error",
-          description: "Failed to load users.",
+          description: "Failed to load users. Please check your admin permissions.",
           variant: "destructive",
         });
-      } else {
-        // Type assertion to ensure the role property matches our expected union type
-        const typedUsers = (data || []).map((user: any) => ({
-          ...user,
-          role: user.role as 'admin' | 'editor' | 'user'
-        }));
-        setUsers(typedUsers);
+        return;
+      }
+
+      if (data) {
+        setUsers(data.map((user: any) => ({
+          id: user.id,
+          email: user.email || '',
+          full_name: user.full_name || '',
+          role: user.role || 'user',
+          created_at: user.created_at,
+        })));
       }
     } catch (error) {
-      console.error('Error in loadUsers:', error);
+      console.error("Error in loadUsers:", error);
       toast({
         title: "Error",
-        description: "Failed to load users.",
+        description: "An unexpected error occurred while loading users.",
         variant: "destructive",
       });
     } finally {
@@ -56,25 +61,55 @@ export function useUserManagement(onStatsUpdate: () => void) {
 
   const handleCreateUser = async () => {
     try {
+      if (!formData.email || !formData.password) {
+        toast({
+          title: "Validation Error",
+          description: "Email and password are required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
         password: formData.password,
-        email_confirm: true,
+        user_metadata: {
+          full_name: formData.fullName,
+        },
+        email_confirm: true, // Auto-confirm email for admin-created users
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error("Auth error:", authError);
+        toast({
+          title: "Error",
+          description: `Failed to create user: ${authError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Update profile with additional info
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.fullName,
-          role: formData.role,
-        })
-        .eq('id', authData.user.id);
+      if (authData.user) {
+        // Create profile entry
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: formData.email,
+            full_name: formData.fullName,
+            role: formData.role,
+          });
 
-      if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          toast({
+            title: "Warning",
+            description: "User created but profile setup failed. Please refresh and try updating the user.",
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Success",
@@ -84,11 +119,11 @@ export function useUserManagement(onStatsUpdate: () => void) {
       resetForm();
       loadUsers();
       onStatsUpdate();
-    } catch (error: any) {
-      console.error('Error creating user:', error);
+    } catch (error) {
+      console.error("Error creating user:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create user.",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
     }
@@ -98,15 +133,33 @@ export function useUserManagement(onStatsUpdate: () => void) {
     if (!editingUser) return;
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.fullName,
-          role: formData.role,
-        })
-        .eq('id', editingUser.id);
+      // Use the backend function to update user role
+      const { error } = await supabase.rpc('update_user_role', {
+        user_id: editingUser.id,
+        new_role: formData.role,
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating user:", error);
+        toast({
+          title: "Error",
+          description: `Failed to update user: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Also update full_name if changed
+      if (formData.fullName !== editingUser.full_name) {
+        const { error: nameError } = await supabase
+          .from('profiles')
+          .update({ full_name: formData.fullName })
+          .eq('id', editingUser.id);
+
+        if (nameError) {
+          console.error("Error updating name:", nameError);
+        }
+      }
 
       toast({
         title: "Success",
@@ -115,24 +168,31 @@ export function useUserManagement(onStatsUpdate: () => void) {
 
       resetForm();
       loadUsers();
-    } catch (error: any) {
-      console.error('Error updating user:', error);
+      onStatsUpdate();
+    } catch (error) {
+      console.error("Error updating user:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update user.",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
     try {
-      // Delete from Supabase Auth (this will cascade to profiles)
+      // Delete from auth (this will cascade to profiles due to foreign key)
       const { error } = await supabase.auth.admin.deleteUser(userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting user:", error);
+        toast({
+          title: "Error",
+          description: `Failed to delete user: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({
         title: "Success",
@@ -141,11 +201,11 @@ export function useUserManagement(onStatsUpdate: () => void) {
 
       loadUsers();
       onStatsUpdate();
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
+    } catch (error) {
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to delete user.",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
     }
@@ -165,8 +225,8 @@ export function useUserManagement(onStatsUpdate: () => void) {
   const openEditDialog = (user: User) => {
     setEditingUser(user);
     setFormData({
-      email: user.email || "",
-      fullName: user.full_name || "",
+      email: user.email,
+      fullName: user.full_name,
       role: user.role,
       password: "",
     });
@@ -174,13 +234,7 @@ export function useUserManagement(onStatsUpdate: () => void) {
   };
 
   const openCreateDialog = () => {
-    setEditingUser(null);
-    setFormData({
-      email: "",
-      fullName: "",
-      role: "user",
-      password: "",
-    });
+    resetForm();
     setDialogOpen(true);
   };
 

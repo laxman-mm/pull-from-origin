@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +13,21 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
+interface AdminStats {
+  totalUsers: number;
+  totalRecipes: number;
+  totalCategories: number;
+  totalComments: number;
+}
+
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalRecipes: 0,
-    totalBlogPosts: 0,
+    totalCategories: 0,
+    totalComments: 0,
   });
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,40 +36,39 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
   const loadStats = async () => {
     try {
-      // Get user count from profiles table
-      const { count: userCount, error: userError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      setLoading(true);
+      
+      // Use the new backend function to get admin stats
+      const { data, error } = await supabase
+        .rpc('get_admin_stats');
 
-      // Get recipe count from receipes table
-      const { count: recipeCount, error: recipeError } = await supabase
-        .from('receipes')
-        .select('*', { count: 'exact', head: true })
-        .not('published_at', 'is', null);
-
-      // Get category count from categories table
-      const { count: categoryCount, error: categoryError } = await supabase
-        .from('categories')
-        .select('*', { count: 'exact', head: true })
-        .not('published_at', 'is', null);
-
-      if (userError) {
-        console.error('Error loading user count:', userError);
-      }
-      if (recipeError) {
-        console.error('Error loading recipe count:', recipeError);
-      }
-      if (categoryError) {
-        console.error('Error loading category count:', categoryError);
+      if (error) {
+        console.error('Error loading admin stats:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load admin statistics. Please check your admin permissions.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      setStats({
-        totalUsers: userCount || 0,
-        totalRecipes: recipeCount || 0,
-        totalBlogPosts: categoryCount || 0, // Using categories as "content pieces"
-      });
+      if (data) {
+        setStats({
+          totalUsers: data.totalUsers || 0,
+          totalRecipes: data.totalRecipes || 0,
+          totalCategories: data.totalCategories || 0,
+          totalComments: data.totalComments || 0,
+        });
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while loading statistics.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,6 +89,17 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -96,7 +116,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -118,10 +138,19 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalCategories}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalBlogPosts}</div>
+              <div className="text-2xl font-bold">{stats.totalComments}</div>
             </CardContent>
           </Card>
         </div>

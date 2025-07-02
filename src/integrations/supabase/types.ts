@@ -2373,12 +2373,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_all_users_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          role: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
       }
       set_user_as_admin: {
         Args: { user_email: string }
+        Returns: undefined
+      }
+      update_user_role: {
+        Args: { user_id: string; new_role: string }
         Returns: undefined
       }
     }

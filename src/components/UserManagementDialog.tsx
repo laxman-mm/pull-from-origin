@@ -67,13 +67,12 @@ export function UserManagementDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
-            <Select value={formData.role} onValueChange={(value: 'admin' | 'editor' | 'user') => setFormData({ ...formData, role: value })}>
+            <Select value={formData.role} onValueChange={(value: 'admin' | 'user') => setFormData({ ...formData, role: value })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
-                <SelectItem value="editor">Editor</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
