@@ -31,6 +31,7 @@ interface Recipe {
   nutrition_fat_in_g: number;
   categories?: { id: number; name: string; slug: string }[];
   image_url?: string;
+  author?: { id: number; name: string; email: string; avatar_url?: string };
 }
 
 // Fallback image for recipes without images
@@ -135,11 +136,57 @@ const RecipeDetail = () => {
             : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${imageData.files.url}`;
         }
 
+        // Fetch the author for this recipe
+        const { data: authorData, error: authorError } = await supabase
+          .from('receipes_author_lnk')
+          .select(`
+            authors!inner(
+              id,
+              name,
+              email
+            )
+          `)
+          .eq('receipe_id', data.id)
+          .limit(1)
+          .single();
+
+        let author = null;
+        if (!authorError && authorData?.authors) {
+          // Fetch the author's avatar image
+          const { data: authorImageData, error: authorImageError } = await supabase
+            .from('files_related_mph')
+            .select(`
+              files!inner(
+                url,
+                alternative_text,
+                name
+              )
+            `)
+            .eq('related_id', authorData.authors.id)
+            .eq('related_type', 'api::author.author')
+            .eq('field', 'avatar')
+            .limit(1)
+            .single();
+
+          let authorAvatarUrl = null;
+          if (!authorImageError && authorImageData?.files?.url) {
+            authorAvatarUrl = authorImageData.files.url.startsWith('http') 
+              ? authorImageData.files.url 
+              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${authorImageData.files.url}`;
+          }
+
+          author = {
+            ...authorData.authors,
+            avatar_url: authorAvatarUrl
+          };
+        }
+
         // Transform the data to match our Recipe interface
         const transformedRecipe = {
           ...data,
           categories: data.receipes_categories_lnk?.map((link: any) => link.categories) || [],
-          image_url: imageUrl
+          image_url: imageUrl,
+          author: author
         };
 
         setRecipe(transformedRecipe);
@@ -274,12 +321,12 @@ const RecipeDetail = () => {
                 {/* Author info */}
                 <div className="flex items-center mb-8">
                   <img 
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                    alt="Chef"
+                    src={recipe.author?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+                    alt={recipe.author?.name || "Chef"}
                     className="w-10 h-10 rounded-full object-cover mr-3" 
                   />
                   <div>
-                    <p className="text-sm font-medium">Chef</p>
+                    <p className="text-sm font-medium">{recipe.author?.name || "Chef"}</p>
                     <time className="text-xs text-muted-foreground" dateTime={recipe.published_at || ''}>
                       {formatDate(recipe.published_at)}
                     </time>

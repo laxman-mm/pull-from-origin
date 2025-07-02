@@ -27,18 +27,36 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const loadStats = async () => {
     try {
       // Get user count from profiles table
-      const { count: userCount, error } = await supabase
+      const { count: userCount, error: userError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      if (error) {
-        console.error('Error loading user count:', error);
+      // Get recipe count from receipes table
+      const { count: recipeCount, error: recipeError } = await supabase
+        .from('receipes')
+        .select('*', { count: 'exact', head: true })
+        .not('published_at', 'is', null);
+
+      // Get category count from categories table
+      const { count: categoryCount, error: categoryError } = await supabase
+        .from('categories')
+        .select('*', { count: 'exact', head: true })
+        .not('published_at', 'is', null);
+
+      if (userError) {
+        console.error('Error loading user count:', userError);
+      }
+      if (recipeError) {
+        console.error('Error loading recipe count:', recipeError);
+      }
+      if (categoryError) {
+        console.error('Error loading category count:', categoryError);
       }
 
       setStats({
         totalUsers: userCount || 0,
-        totalRecipes: 25, // Static for now since recipes are in data file
-        totalBlogPosts: 8, // Static for now since blog posts are in data file
+        totalRecipes: recipeCount || 0,
+        totalBlogPosts: categoryCount || 0, // Using categories as "content pieces"
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -99,7 +117,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Blog Posts</CardTitle>
+              <CardTitle className="text-sm font-medium">Categories</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

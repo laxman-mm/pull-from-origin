@@ -861,33 +861,6 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          role: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id: string
-          role?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          role?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       receipes: {
         Row: {
           cook_time_in_min: number | null
@@ -987,35 +960,35 @@ export type Database = {
           },
         ]
       }
-      receipes_admin_user_lnk: {
+      receipes_author_lnk: {
         Row: {
+          author_id: number | null
           id: number
           receipe_id: number | null
-          user_id: number | null
         }
         Insert: {
+          author_id?: number | null
           id?: number
           receipe_id?: number | null
-          user_id?: number | null
         }
         Update: {
+          author_id?: number | null
           id?: number
           receipe_id?: number | null
-          user_id?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "receipes_admin_user_lnk_fk"
+            foreignKeyName: "receipes_author_lnk_fk"
             columns: ["receipe_id"]
             isOneToOne: false
             referencedRelation: "receipes"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "receipes_admin_user_lnk_ifk"
-            columns: ["user_id"]
+            foreignKeyName: "receipes_author_lnk_ifk"
+            columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: "admin_users"
+            referencedRelation: "authors"
             referencedColumns: ["id"]
           },
         ]

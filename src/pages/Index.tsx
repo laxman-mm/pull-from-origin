@@ -199,14 +199,14 @@ const Index = () => {
                           </Link>
                         </h3>
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
-                        <div className="flex items-center">
-                          <img 
-                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                            alt="Chef" 
-                            className="w-8 h-8 rounded-full object-cover mr-2" 
-                          />
-                          <span className="text-xs">{t("by")} Chef</span>
-                        </div>
+                          <div className="flex items-center">
+                            <img 
+                              src={recipe.author?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+                              alt={recipe.author?.name || "Chef"} 
+                              className="w-8 h-8 rounded-full object-cover mr-2" 
+                            />
+                            <span className="text-xs">{t("by")} {recipe.author?.name || "Chef"}</span>
+                          </div>
                       </div>
                     </div>
                   ))}
@@ -248,11 +248,11 @@ const Index = () => {
                           <p className="text-sm text-muted-foreground mb-4">{recipe.excerpt || recipe.description}</p>
                           <div className="flex items-center">
                             <img 
-                              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-                              alt="Chef" 
+                              src={recipe.author?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+                              alt={recipe.author?.name || "Chef"} 
                               className="w-6 h-6 rounded-full object-cover mr-2" 
                             />
-                            <span className="text-xs">Chef</span>
+                            <span className="text-xs">{recipe.author?.name || "Chef"}</span>
                           </div>
                         </div>
                       </div>
