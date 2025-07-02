@@ -54,7 +54,7 @@ export const useRecipes = () => {
       
       // Use the PostgreSQL function to search recipes
       const { data: recipesData, error: recipesError } = await supabase
-        .rpc('search_recipes' as any, {
+        .rpc('search_recipes', {
           search_query: searchQuery || '',
           category_filter: categoryFilter || null,
           difficulty_filter: difficultyFilter || null,

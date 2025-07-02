@@ -2396,6 +2396,41 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      search_recipes: {
+        Args: {
+          search_query?: string
+          category_filter?: string
+          difficulty_filter?: string
+          limit_count?: number
+          offset_count?: number
+        }
+        Returns: {
+          id: number
+          title: string
+          slug: string
+          description: string
+          excerpt: string
+          difficulty: string
+          prep_time_in_min: number
+          cook_time_in_min: number
+          servings: number
+          featured: boolean
+          trending: boolean
+          editors_pick: boolean
+          created_at: string
+          updated_at: string
+          published_at: string
+          ingredients: Json
+          instructions: Json
+          nutrition_calories: number
+          nutrition_protein_in_g: number
+          nutrition_carbs_in_g: number
+          nutrition_fat_in_g: number
+          categories: Json
+          image_url: string
+          author: Json
+        }[]
+      }
       set_user_as_admin: {
         Args: { user_email: string }
         Returns: undefined
