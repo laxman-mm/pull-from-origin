@@ -53,11 +53,13 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       }
 
       if (data) {
+        // Type cast the JSON data to our expected structure
+        const statsData = data as AdminStats;
         setStats({
-          totalUsers: data.totalUsers || 0,
-          totalRecipes: data.totalRecipes || 0,
-          totalCategories: data.totalCategories || 0,
-          totalComments: data.totalComments || 0,
+          totalUsers: statsData.totalUsers || 0,
+          totalRecipes: statsData.totalRecipes || 0,
+          totalCategories: statsData.totalCategories || 0,
+          totalComments: statsData.totalComments || 0,
         });
       }
     } catch (error) {

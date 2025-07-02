@@ -17,7 +17,7 @@ interface Comment {
   profiles?: {
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface CommentsProps {
@@ -65,7 +65,7 @@ export function Comments({ recipeId }: CommentsProps) {
           content,
           created_at,
           user_id,
-          profiles:user_id (
+          profiles!comments_user_id_fkey (
             full_name,
             email
           )
@@ -83,7 +83,13 @@ export function Comments({ recipeId }: CommentsProps) {
         return;
       }
 
-      setComments(data || []);
+      // Handle the data properly, accounting for potential null profiles
+      const commentsWithProfiles = (data || []).map(comment => ({
+        ...comment,
+        profiles: comment.profiles || null
+      }));
+
+      setComments(commentsWithProfiles);
     } catch (error) {
       console.error('Error loading comments:', error);
     } finally {
