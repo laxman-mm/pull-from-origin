@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Search, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSearchFunctionality } from "@/hooks/useSearch";
 
 const recentPosts = [
   { title: "Creamy Garlic Parmesan Pasta", slug: "creamy-garlic-parmesan-pasta" },
@@ -23,12 +22,18 @@ const fallbackTags = [
 interface SidebarProps {
   onTagFilter?: (tagName: string) => void;
   activeTag?: string | null;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
+  recentRecipes?: Array<{
+    id: number;
+    title: string;
+    slug: string;
+  }>;
 }
 
-export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
+export function Sidebar({ onTagFilter, activeTag, searchQuery = "", setSearchQuery, recentRecipes = [] }: SidebarProps) {
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
-  const { searchQuery, handleSearchInput, handleSearchSubmit } = useSearchFunctionality();
   
   useEffect(() => {
     const fetchTags = async () => {
@@ -66,7 +71,7 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSearchSubmit(searchQuery);
+    // No navigation, just prevent default
   };
   
   const handleSubscribe = (e: React.FormEvent) => {
@@ -93,7 +98,7 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
             type="text"
             placeholder="Search recipes..."
             value={searchQuery}
-            onChange={(e) => handleSearchInput(e.target.value)}
+            onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
             className="rounded-r-none"
           />
           <Button 
@@ -107,18 +112,22 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
         </form>
       </div>
       
-      {/* Recent Posts */}
+      {/* Recent Recipes */}
       <div className="bg-card p-6 rounded-md border border-border">
-        <h3 className="font-playfair text-lg font-medium mb-4">Recent Posts</h3>
+        <h3 className="font-playfair text-lg font-medium mb-4">Recent Recipes</h3>
         <ul className="space-y-3">
-          {recentPosts.map((post) => (
-            <li key={post.slug}>
-              <Link to={`/recipes/${post.slug}`} className="block hover:text-primary transition-colors text-sm">
-                {post.title}
-              </Link>
-              <Separator className="mt-3" />
-            </li>
-          ))}
+          {recentRecipes && recentRecipes.length > 0 ? (
+            recentRecipes.map((recipe) => (
+              <li key={recipe.slug}>
+                <Link to={`/recipes/${recipe.slug}`} className="block hover:text-primary transition-colors text-sm">
+                  {recipe.title}
+                </Link>
+                <Separator className="mt-3" />
+              </li>
+            ))
+          ) : (
+            <li className="text-muted-foreground text-sm">No recent recipes found.</li>
+          )}
         </ul>
       </div>
       

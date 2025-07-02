@@ -25,6 +25,7 @@ const Index = () => {
   const { t } = useLanguage();
   const { recipes, loading, error, refetchRecipes } = useRecipes();
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleTagFilter = (tagName: string) => {
     if (activeTag === tagName) {
@@ -41,9 +42,18 @@ const Index = () => {
     refetchRecipes();
   };
 
-  const featuredRecipes = recipes.filter(recipe => recipe.featured);
-  const trendingRecipes = recipes.filter(recipe => recipe.trending);
-  const editorsPickRecipes = recipes.filter(recipe => recipe.editors_pick);
+  // Filter recipes by search query
+  const filteredRecipes = searchQuery.trim() === ""
+    ? recipes
+    : recipes.filter(recipe =>
+        recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (recipe.description && recipe.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (recipe.excerpt && recipe.excerpt.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
+  const featuredRecipes = filteredRecipes.filter(recipe => recipe.featured);
+  const trendingRecipes = filteredRecipes.filter(recipe => recipe.trending);
+  const editorsPickRecipes = filteredRecipes.filter(recipe => recipe.editors_pick);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
@@ -162,7 +172,7 @@ const Index = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {recipes.slice(0, 4).map((recipe, index) => (
+                  {filteredRecipes.slice(0, 4).map((recipe, index) => (
                     <div key={recipe.id} className="recipe-card group">
                       <div className="recipe-card-image-container">
                         <img 
@@ -286,7 +296,17 @@ const Index = () => {
             
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <Sidebar onTagFilter={handleTagFilter} activeTag={activeTag} />
+              <Sidebar 
+                onTagFilter={handleTagFilter} 
+                activeTag={activeTag} 
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                recentRecipes={filteredRecipes
+                  .slice()
+                  .sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime())
+                  .slice(0, 5)
+                }
+              />
             </div>
           </div>
         </div>

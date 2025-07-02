@@ -23,15 +23,15 @@ const Recipes = () => {
   const { t } = useLanguage();
   const { recipes, categories, loading, error, refetchRecipes } = useRecipes();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Initialize search from URL parameters
   useEffect(() => {
-    const searchFromUrl = searchParams.get('search');
-    if (searchFromUrl && searchFromUrl !== searchQuery) {
+    const searchFromUrl = searchParams.get('q');
+    if (searchFromUrl !== null && searchFromUrl !== searchQuery) {
       setSearchQuery(searchFromUrl);
       refetchRecipes(undefined, undefined, searchFromUrl);
     }
@@ -43,22 +43,18 @@ const Recipes = () => {
   // Handle search with debouncing and URL updates
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
     // Update URL parameters
     if (query) {
-      setSearchParams({ search: query });
+      setSearchParams({ q: query });
     } else {
       setSearchParams({});
     }
-    
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
-    
     const timeout = setTimeout(() => {
       refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, query);
     }, 500);
-    
     setSearchTimeout(timeout);
   };
   

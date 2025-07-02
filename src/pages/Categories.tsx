@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,13 +25,20 @@ const Categories = () => {
   const { t } = useLanguage();
   const { recipes, categories, loading, error } = useRecipes();
   const [activeCategory, setActiveCategory] = useState<string>("");
-  
-  // Set initial category when categories are loaded
+  const location = useLocation();
+
+  // Set initial category from query param or first category
   useEffect(() => {
-    if (categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].slug);
+    if (categories.length > 0) {
+      const params = new URLSearchParams(location.search);
+      const queryCategory = params.get("category");
+      if (queryCategory && categories.some(cat => cat.slug === queryCategory)) {
+        setActiveCategory(queryCategory);
+      } else if (!activeCategory) {
+        setActiveCategory(categories[0].slug);
+      }
     }
-  }, [categories, activeCategory]);
+  }, [categories, location.search]);
   
   // Get recipes by category
   const getRecipesByCategory = (categorySlug: string) => {

@@ -12,7 +12,8 @@ import { useLanguage } from "@/context/LanguageContext";
 
 const Blog = () => {
   const { t } = useLanguage();
-  
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -21,6 +22,16 @@ const Blog = () => {
       year: "numeric",
     });
   };
+
+  // Filter blog posts based on search query
+  const filteredBlogPosts = blogPosts.filter((post) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      post.title.toLowerCase().includes(query) ||
+      post.excerpt.toLowerCase().includes(query) ||
+      post.author.name.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -32,17 +43,28 @@ const Blog = () => {
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Discover the art and science of cooking through our collection of guides, tips, and stories
           </p>
+
+          {/* Search Bar */}
+          <div className="flex justify-center mb-8">
+            <input
+              type="text"
+              placeholder="Search blog posts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-md p-3 border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
               {/* Featured Article */}
-              {blogPosts.length > 0 && (
+              {filteredBlogPosts.length > 0 && (
                 <div className="mb-10">
                   <div className="relative overflow-hidden rounded-xl mb-6">
                     <img 
-                      src={blogPosts[0].coverImage}
-                      alt={blogPosts[0].title}
+                      src={filteredBlogPosts[0].coverImage}
+                      alt={filteredBlogPosts[0].title}
                       className="w-full aspect-[16/9] object-cover transition-transform hover:scale-105 duration-500"
                     />
                     <div className="absolute top-4 left-4">
@@ -52,29 +74,29 @@ const Blog = () => {
                     </div>
                   </div>
                   
-                  <Link to={`/blog/${blogPosts[0].slug}`} className="group">
+                  <Link to={`/blog/${filteredBlogPosts[0].slug}`} className="group">
                     <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-3 group-hover:text-primary transition-colors">
-                      {blogPosts[0].title}
+                      {filteredBlogPosts[0].title}
                     </h2>
                   </Link>
                   
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {formatDate(blogPosts[0].publishedAt)}
+                      {formatDate(filteredBlogPosts[0].publishedAt)}
                     </div>
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-2" />
-                      {blogPosts[0].readTime} min read
+                      {filteredBlogPosts[0].readTime} min read
                     </div>
                   </div>
                   
                   <p className="text-muted-foreground mb-4">
-                    {blogPosts[0].excerpt}
+                    {filteredBlogPosts[0].excerpt}
                   </p>
                   
                   <Link 
-                    to={`/blog/${blogPosts[0].slug}`}
+                    to={`/blog/${filteredBlogPosts[0].slug}`}
                     className="text-primary font-medium hover:underline"
                   >
                     Read more
@@ -89,7 +111,7 @@ const Blog = () => {
               
               {/* Article List */}
               <div className="space-y-8">
-                {blogPosts.slice(1).map((post) => (
+                {filteredBlogPosts.slice(1).map((post) => (
                   <Card key={post.id} className="overflow-hidden">
                     <div className="md:flex">
                       <div className="md:w-1/3 h-48 md:h-auto">
@@ -136,6 +158,9 @@ const Blog = () => {
                     </div>
                   </Card>
                 ))}
+                {filteredBlogPosts.length <= 1 && (
+                  <div className="text-center text-muted-foreground py-8">No blog posts found.</div>
+                )}
               </div>
             </div>
             
