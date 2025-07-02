@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,7 +64,7 @@ export function Comments({ recipeId }: CommentsProps) {
           content,
           created_at,
           user_id,
-          profiles!comments_user_id_fkey (
+          profiles (
             full_name,
             email
           )

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +53,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
       if (data) {
         // Type cast the JSON data to our expected structure
-        const statsData = data as AdminStats;
+        const statsData = data as unknown as AdminStats;
         setStats({
           totalUsers: statsData.totalUsers || 0,
           totalRecipes: statsData.totalRecipes || 0,
