@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Clock, Search } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRecipes } from "@/hooks/useRecipes";
+import { SearchResults } from "@/components/SearchResults";
 
 // Fallback image for recipes without images
 const getFallbackImage = (index: number) => {
@@ -22,17 +22,34 @@ const getFallbackImage = (index: number) => {
 const Recipes = () => {
   const { t } = useLanguage();
   const { recipes, categories, loading, error, refetchRecipes } = useRecipes();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
+  // Initialize search from URL parameters
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search');
+    if (searchFromUrl && searchFromUrl !== searchQuery) {
+      setSearchQuery(searchFromUrl);
+      refetchRecipes(undefined, undefined, searchFromUrl);
+    }
+  }, [searchParams, refetchRecipes]);
+  
   // Get all unique difficulties from recipes
   const allDifficulties = Array.from(new Set(recipes.map(recipe => recipe.difficulty).filter(Boolean)));
   
-  // Handle search with debouncing
+  // Handle search with debouncing and URL updates
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    
+    // Update URL parameters
+    if (query) {
+      setSearchParams({ search: query });
+    } else {
+      setSearchParams({});
+    }
     
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -40,7 +57,7 @@ const Recipes = () => {
     
     const timeout = setTimeout(() => {
       refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, query);
-    }, 500); // 500ms delay
+    }, 500);
     
     setSearchTimeout(timeout);
   };
@@ -71,6 +88,7 @@ const Recipes = () => {
     setActiveCategory(null);
     setActiveDifficulty(null);
     setSearchQuery("");
+    setSearchParams({});
     refetchRecipes();
   };
   
@@ -134,10 +152,10 @@ const Recipes = () => {
         <div className="container mx-auto px-4 h-full flex items-end pb-12 md:pb-20 relative z-10">
           <div className="max-w-3xl text-white">
             <h1 className="text-3xl md:text-5xl font-playfair font-bold mb-4">
-              {t("recipes")}
+              {searchQuery ? `Search Results` : t("recipes")}
             </h1>
             <p className="text-sm md:text-base opacity-90">
-              {t("browse_recipes")}
+              {searchQuery ? `Results for "${searchQuery}"` : t("browse_recipes")}
             </p>
           </div>
         </div>
@@ -162,115 +180,126 @@ const Recipes = () => {
               </div>
             </div>
             
-            {/* Filters - Mobile Only */}
-            <div className="lg:hidden mb-8">
-              <div className="mb-4">
-                <h3 className="font-medium mb-2">{t("categories")}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => handleCategoryClick(category.slug)}
-                      className={`text-xs px-3 py-1 rounded-full ${
-                        activeCategory === category.slug 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-secondary hover:bg-secondary/70'
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="font-medium mb-2">{t("difficulty")}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {allDifficulties.map(difficulty => (
-                    <button
-                      key={difficulty}
-                      onClick={() => handleDifficultyClick(difficulty)}
-                      className={`text-xs px-3 py-1 rounded-full ${
-                        activeDifficulty === difficulty 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-secondary hover:bg-secondary/70'
-                      }`}
-                    >
-                      {difficulty}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Filter Results */}
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-muted-foreground text-sm">
-                {t("showing")} {recipes.length} {t("recipes")}
-              </p>
-              
-              {(activeCategory || activeDifficulty || searchQuery) && (
-                <button
-                  onClick={clearAllFilters}
-                  className="text-primary text-sm hover:underline"
-                >
-                  {t("clear_filters")}
-                </button>
-              )}
-            </div>
-            
-            {/* Recipe Grid */}
-            {recipes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {recipes.map((recipe, index) => (
-                  <div key={recipe.id} className="recipe-card group">
-                    <div className="recipe-card-image-container">
-                      <img 
-                        src={recipe.image_url || getFallbackImage(index)} 
-                        alt={recipe.title} 
-                        className="recipe-card-image"
-                      />
-                    </div>
-                    <div className="p-5">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                        <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
-                          {recipe.categories?.[0]?.name || 'Recipe'}
-                        </span>
-                        <span className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}
-                        </span>
-                      </div>
-                      <h3 className="font-playfair font-semibold text-lg mb-2">
-                        <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
-                          {recipe.title}
-                        </Link>
-                      </h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <img 
-                            src={recipe.author?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
-                            alt={recipe.author?.name || "Chef"} 
-                            className="w-6 h-6 rounded-full object-cover mr-2" 
-                          />
-                          <span className="text-xs">{recipe.author?.name || "Chef"}</span>
-                        </div>
-                        <time className="text-xs text-muted-foreground" dateTime={recipe.published_at || ''}>
-                          {formatDate(recipe.published_at)}
-                        </time>
-                      </div>
+            {/* Show search results or regular recipes */}
+            {searchQuery ? (
+              <SearchResults 
+                results={recipes} 
+                query={searchQuery}
+                isLoading={loading}
+              />
+            ) : (
+              <>
+                {/* Filters - Mobile Only */}
+                <div className="lg:hidden mb-8">
+                  <div className="mb-4">
+                    <h3 className="font-medium mb-2">{t("categories")}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(category => (
+                        <button
+                          key={category.id}
+                          onClick={() => handleCategoryClick(category.slug)}
+                          className={`text-xs px-3 py-1 rounded-full ${
+                            activeCategory === category.slug 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-secondary hover:bg-secondary/70'
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <h3 className="text-xl font-playfair font-semibold mb-2">{t("no_recipes_found")}</h3>
-                <p className="text-muted-foreground">
-                  {t("try_adjusting_search")}
-                </p>
-              </div>
+                  
+                  <div>
+                    <h3 className="font-medium mb-2">{t("difficulty")}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {allDifficulties.map(difficulty => (
+                        <button
+                          key={difficulty}
+                          onClick={() => handleDifficultyClick(difficulty)}
+                          className={`text-xs px-3 py-1 rounded-full ${
+                            activeDifficulty === difficulty 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-secondary hover:bg-secondary/70'
+                          }`}
+                        >
+                          {difficulty}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Filter Results */}
+                <div className="mb-6 flex items-center justify-between">
+                  <p className="text-muted-foreground text-sm">
+                    {t("showing")} {recipes.length} {t("recipes")}
+                  </p>
+                  
+                  {(activeCategory || activeDifficulty || searchQuery) && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="text-primary text-sm hover:underline"
+                    >
+                      {t("clear_filters")}
+                    </button>
+                  )}
+                </div>
+                
+                {/* Recipe Grid */}
+                {recipes.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {recipes.map((recipe, index) => (
+                      <div key={recipe.id} className="recipe-card group">
+                        <div className="recipe-card-image-container">
+                          <img 
+                            src={recipe.image_url || getFallbackImage(index)} 
+                            alt={recipe.title} 
+                            className="recipe-card-image"
+                          />
+                        </div>
+                        <div className="p-5">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium">
+                              {recipe.categories?.[0]?.name || 'Recipe'}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {(recipe.prep_time_in_min || 0) + (recipe.cook_time_in_min || 0)} {t("minutes")}
+                            </span>
+                          </div>
+                          <h3 className="font-playfair font-semibold text-lg mb-2">
+                            <Link to={`/recipes/${recipe.slug}`} className="hover:text-primary transition-colors">
+                              {recipe.title}
+                            </Link>
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <img 
+                                src={recipe.author?.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+                                alt={recipe.author?.name || "Chef"} 
+                                className="w-6 h-6 rounded-full object-cover mr-2" 
+                              />
+                              <span className="text-xs">{recipe.author?.name || "Chef"}</span>
+                            </div>
+                            <time className="text-xs text-muted-foreground" dateTime={recipe.published_at || ''}>
+                              {formatDate(recipe.published_at)}
+                            </time>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <h3 className="text-xl font-playfair font-semibold mb-2">{t("no_recipes_found")}</h3>
+                    <p className="text-muted-foreground">
+                      {t("try_adjusting_search")}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
           

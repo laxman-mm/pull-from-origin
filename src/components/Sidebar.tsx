@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Search, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useRecipes } from "@/hooks/useRecipes";
+import { useSearchFunctionality } from "@/hooks/useSearch";
 
 const recentPosts = [
   { title: "Creamy Garlic Parmesan Pasta", slug: "creamy-garlic-parmesan-pasta" },
@@ -27,11 +26,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-  const { refetchRecipes } = useRecipes();
+  const { searchQuery, handleSearchInput, handleSearchSubmit } = useSearchFunctionality();
   
   useEffect(() => {
     const fetchTags = async () => {
@@ -66,39 +63,10 @@ export function Sidebar({ onTagFilter, activeTag }: SidebarProps) {
 
     fetchTags();
   }, []);
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchTimeout]);
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Trigger search with current query
-    if (refetchRecipes) {
-      refetchRecipes(undefined, undefined, searchQuery);
-    }
-  };
-
-  const handleSearchInput = (query: string) => {
-    setSearchQuery(query);
-    
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    
-    // Debounce search
-    const timeout = setTimeout(() => {
-      if (refetchRecipes) {
-        refetchRecipes(undefined, undefined, query);
-      }
-    }, 500);
-    
-    setSearchTimeout(timeout);
+    handleSearchSubmit(searchQuery);
   };
   
   const handleSubscribe = (e: React.FormEvent) => {
