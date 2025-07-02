@@ -1,3 +1,4 @@
+
 -- Create profiles table for user information if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -16,6 +17,8 @@ DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
 
 -- Create policies for profiles
 CREATE POLICY "Users can view their own profile" 
@@ -47,6 +50,46 @@ USING (
     WHERE id = auth.uid() AND role = 'admin'
   )
 );
+
+CREATE POLICY "Admins can insert profiles" 
+ON public.profiles 
+FOR INSERT 
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can delete profiles" 
+ON public.profiles 
+FOR DELETE 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'admin'
+  )
+);
+
+-- Drop existing trigger and function if they exist
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Create improved trigger function to automatically create profile on user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', ''))
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Create comments table for recipe comments (requiring authentication)
 CREATE TABLE IF NOT EXISTS public.comments (
@@ -98,3 +141,21 @@ USING (
     WHERE id = auth.uid() AND role = 'admin'
   )
 );
+
+-- Create or replace the set_user_as_admin function
+CREATE OR REPLACE FUNCTION public.set_user_as_admin(user_email text)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.profiles 
+  SET role = 'admin' 
+  WHERE email = user_email;
+  
+  -- If no profile exists, create one
+  IF NOT FOUND THEN
+    INSERT INTO public.profiles (id, email, role)
+    SELECT id, email, 'admin'
+    FROM auth.users
+    WHERE email = user_email;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
