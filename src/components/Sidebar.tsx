@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function Sidebar({ onTagFilter, activeTag, searchQuery = "", setSearchQue
           .from('tags')
           .select('name')
           .not('name', 'is', null)
+          .not('published_at', 'is', null)
           .limit(10);
         
         if (error) {

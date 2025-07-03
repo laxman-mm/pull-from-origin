@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -26,6 +27,7 @@ const Recipes = () => {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<string | null>(null);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Initialize search from URL parameters
@@ -53,7 +55,7 @@ const Recipes = () => {
       clearTimeout(searchTimeout);
     }
     const timeout = setTimeout(() => {
-      refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, query);
+      refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, query, activeTag || undefined);
     }, 500);
     setSearchTimeout(timeout);
   };
@@ -71,18 +73,25 @@ const Recipes = () => {
   const handleCategoryClick = (categorySlug: string) => {
     const newCategory = activeCategory === categorySlug ? null : categorySlug;
     setActiveCategory(newCategory);
-    refetchRecipes(newCategory || undefined, activeDifficulty || undefined, searchQuery);
+    refetchRecipes(newCategory || undefined, activeDifficulty || undefined, searchQuery, activeTag || undefined);
   };
   
   const handleDifficultyClick = (difficulty: string) => {
     const newDifficulty = activeDifficulty === difficulty ? null : difficulty;
     setActiveDifficulty(newDifficulty);
-    refetchRecipes(activeCategory || undefined, newDifficulty || undefined, searchQuery);
+    refetchRecipes(activeCategory || undefined, newDifficulty || undefined, searchQuery, activeTag || undefined);
+  };
+
+  const handleTagFilter = (tagName: string) => {
+    const newTag = activeTag === tagName ? null : tagName;
+    setActiveTag(newTag);
+    refetchRecipes(activeCategory || undefined, activeDifficulty || undefined, searchQuery, newTag || undefined);
   };
 
   const clearAllFilters = () => {
     setActiveCategory(null);
     setActiveDifficulty(null);
+    setActiveTag(null);
     setSearchQuery("");
     setSearchParams({});
     refetchRecipes();
@@ -230,9 +239,10 @@ const Recipes = () => {
                 <div className="mb-6 flex items-center justify-between">
                   <p className="text-muted-foreground text-sm">
                     {t("showing")} {recipes.length} {t("recipes")}
+                    {activeTag && ` filtered by tag: ${activeTag}`}
                   </p>
                   
-                  {(activeCategory || activeDifficulty || searchQuery) && (
+                  {(activeCategory || activeDifficulty || activeTag || searchQuery) && (
                     <button
                       onClick={clearAllFilters}
                       className="text-primary text-sm hover:underline"
@@ -270,6 +280,24 @@ const Recipes = () => {
                             </Link>
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{recipe.excerpt || recipe.description}</p>
+                          
+                          {/* Display recipe tags */}
+                          {recipe.tags && recipe.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {recipe.tags.slice(0, 3).map((tag) => (
+                                <span 
+                                  key={tag.id} 
+                                  className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full"
+                                >
+                                  {tag.name}
+                                </span>
+                              ))}
+                              {recipe.tags.length > 3 && (
+                                <span className="text-xs text-muted-foreground">+{recipe.tags.length - 3} more</span>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <img 
@@ -291,7 +319,7 @@ const Recipes = () => {
                   <div className="text-center py-12">
                     <h3 className="text-xl font-playfair font-semibold mb-2">{t("no_recipes_found")}</h3>
                     <p className="text-muted-foreground">
-                      {t("try_adjusting_search")}
+                      {activeTag ? `No recipes found with tag "${activeTag}"` : t("try_adjusting_search")}
                     </p>
                   </div>
                 )}
