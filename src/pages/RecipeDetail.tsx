@@ -58,6 +58,34 @@ const RecipeDetail = () => {
       return item.text || '';
     }).filter(text => text.trim() !== '');
   };
+
+  // Helper function to safely cast Json to expected types
+  const safeJsonCast = {
+    toCategories: (jsonArray: any): { id: number; name: string; slug: string }[] => {
+      if (!Array.isArray(jsonArray)) return [];
+      return jsonArray.map(item => ({
+        id: typeof item === 'object' && item !== null ? item.id || 0 : 0,
+        name: typeof item === 'object' && item !== null ? item.name || '' : '',
+        slug: typeof item === 'object' && item !== null ? item.slug || '' : ''
+      }));
+    },
+    toTags: (jsonArray: any): { id: number; name: string }[] => {
+      if (!Array.isArray(jsonArray)) return [];
+      return jsonArray.map(item => ({
+        id: typeof item === 'object' && item !== null ? item.id || 0 : 0,
+        name: typeof item === 'object' && item !== null ? item.name || '' : ''
+      }));
+    },
+    toAuthor: (jsonObject: any): { id: number; name: string; email: string; avatar_url?: string } | undefined => {
+      if (!jsonObject || typeof jsonObject !== 'object') return undefined;
+      return {
+        id: jsonObject.id || 0,
+        name: jsonObject.name || '',
+        email: jsonObject.email || '',
+        avatar_url: jsonObject.avatar_url || undefined
+      };
+    }
+  };
   
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -98,24 +126,36 @@ const RecipeDetail = () => {
 
         console.log('Found recipe:', foundRecipe);
 
-        // Transform the data to match our Recipe interface
-        const transformedRecipe = {
-          ...foundRecipe,
-          categories: Array.isArray(foundRecipe.categories) ? foundRecipe.categories : [],
-          tags: Array.isArray(foundRecipe.tags) ? foundRecipe.tags : [],
+        // Transform the data to match our Recipe interface with proper type casting
+        const transformedRecipe: Recipe = {
+          id: foundRecipe.id,
+          title: foundRecipe.title,
+          slug: foundRecipe.slug,
+          description: foundRecipe.description,
+          excerpt: foundRecipe.excerpt,
+          difficulty: foundRecipe.difficulty,
+          prep_time_in_min: foundRecipe.prep_time_in_min,
+          cook_time_in_min: foundRecipe.cook_time_in_min,
+          servings: foundRecipe.servings,
+          featured: foundRecipe.featured,
+          trending: foundRecipe.trending,
+          created_at: foundRecipe.created_at,
+          updated_at: foundRecipe.updated_at,
+          published_at: foundRecipe.published_at,
+          ingredients: foundRecipe.ingredients,
+          instructions: foundRecipe.instructions,
+          nutrition_calories: foundRecipe.nutrition_calories,
+          nutrition_protein_in_g: foundRecipe.nutrition_protein_in_g,
+          nutrition_carbs_in_g: foundRecipe.nutrition_carbs_in_g,
+          nutrition_fat_in_g: foundRecipe.nutrition_fat_in_g,
+          categories: safeJsonCast.toCategories(foundRecipe.categories),
+          tags: safeJsonCast.toTags(foundRecipe.tags),
           image_url: foundRecipe.image_url ? (
             foundRecipe.image_url.startsWith('http') 
               ? foundRecipe.image_url 
               : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${foundRecipe.image_url}`
           ) : null,
-          author: foundRecipe.author && Object.keys(foundRecipe.author).length > 0 ? {
-            ...foundRecipe.author,
-            avatar_url: foundRecipe.author.avatar_url ? (
-              foundRecipe.author.avatar_url.startsWith('http')
-                ? foundRecipe.author.avatar_url
-                : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${foundRecipe.author.avatar_url}`
-            ) : null
-          } : null
+          author: safeJsonCast.toAuthor(foundRecipe.author)
         };
 
         setRecipe(transformedRecipe);
