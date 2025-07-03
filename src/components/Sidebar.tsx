@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,45 +30,79 @@ interface SidebarProps {
     title: string;
     slug: string;
   }>;
+  recipeSpecificTags?: Array<{
+    id: number;
+    name: string;
+  }>;
+  showOnlyRecipeTags?: boolean;
 }
 
-export function Sidebar({ onTagFilter, activeTag, searchQuery = "", setSearchQuery, recentRecipes = [] }: SidebarProps) {
+export function Sidebar({ 
+  onTagFilter, 
+  activeTag, 
+  searchQuery = "", 
+  setSearchQuery, 
+  recentRecipes = [],
+  recipeSpecificTags = [],
+  showOnlyRecipeTags = false 
+}: SidebarProps) {
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Memoize the tags to show to prevent unnecessary re-renders
+  const tagsToShow = useMemo(() => {
+    if (showOnlyRecipeTags && recipeSpecificTags.length > 0) {
+      return recipeSpecificTags.map(tag => tag.name);
+    }
+    return popularTags;
+  }, [showOnlyRecipeTags, recipeSpecificTags, popularTags]);
   
   useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        console.log('Attempting to fetch tags from database...');
-        const { data, error } = await supabase
-          .from('tags')
-          .select('name')
-          .not('name', 'is', null)
-          .limit(10);
-        
-        if (error) {
-          console.error('Error fetching tags:', error);
-          // Keep fallback tags if there's an error
+    // Only fetch tags if we're not showing recipe-specific tags and we haven't loaded them yet
+    if (!showOnlyRecipeTags && popularTags === fallbackTags && !isLoading) {
+      const fetchTags = async () => {
+        try {
+          setIsLoading(true);
+          console.log('Fetching popular tags from database...');
+          
+          const { data, error } = await supabase
+            .from('tags')
+            .select(`
+              id,
+              name,
+              receipes_tags_lnk!inner(
+                receipe_id
+              )
+            `)
+            .not('name', 'is', null)
+            .not('published_at', 'is', null)
+            .limit(15);
+          
+          if (error) {
+            console.error('Error fetching tags:', error);
+            setPopularTags(fallbackTags);
+          } else if (data && data.length > 0) {
+            console.log('Successfully fetched popular tags:', data);
+            const tagNames = data
+              .map(tag => tag.name)
+              .filter(Boolean) as string[];
+            setPopularTags(tagNames.length > 0 ? tagNames : fallbackTags);
+          } else {
+            console.log('No tags found in database, using fallback');
+            setPopularTags(fallbackTags);
+          }
+        } catch (error) {
+          console.error('Unexpected error fetching tags:', error);
           setPopularTags(fallbackTags);
-        } else if (data && data.length > 0) {
-          console.log('Successfully fetched tags:', data);
-          const tagNames = data
-            .map(tag => tag.name)
-            .filter(Boolean) as string[];
-          setPopularTags(tagNames.length > 0 ? tagNames : fallbackTags);
-        } else {
-          console.log('No tags found in database, using fallback');
-          setPopularTags(fallbackTags);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Unexpected error fetching tags:', error);
-        // Use fallback tags on any unexpected error
-        setPopularTags(fallbackTags);
-      }
-    };
+      };
 
-    fetchTags();
-  }, []);
+      fetchTags();
+    }
+  }, [showOnlyRecipeTags, isLoading, popularTags]); // Removed recipeSpecificTags from dependency
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,11 +166,13 @@ export function Sidebar({ onTagFilter, activeTag, searchQuery = "", setSearchQue
         </ul>
       </div>
       
-      {/* Popular Tags - Now works as filters */}
+      {/* Popular Tags - Now works as filters and shows recipe-specific tags when needed */}
       <div className="bg-card p-6 rounded-md border border-border">
-        <h3 className="font-playfair text-lg font-medium mb-4">Popular Tags</h3>
+        <h3 className="font-playfair text-lg font-medium mb-4">
+          {showOnlyRecipeTags ? "Recipe Tags" : "Popular Tags"}
+        </h3>
         <div className="flex flex-wrap gap-2">
-          {popularTags.map((tag) => (
+          {tagsToShow.map((tag) => (
             <button 
               key={tag} 
               onClick={() => handleTagClick(tag)}

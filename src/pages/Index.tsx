@@ -26,14 +26,33 @@ const Index = () => {
   const { recipes, loading, error, refetchRecipes } = useRecipes();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filteredRecipes, setFilteredRecipes] = useState(recipes);
+
+  // Update filtered recipes when recipes change or filters change
+  useEffect(() => {
+    let filtered = recipes;
+
+    // Apply search query filter
+    if (searchQuery.trim() !== "") {
+      filtered = filtered.filter(recipe =>
+        recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (recipe.description && recipe.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (recipe.excerpt && recipe.excerpt.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    setFilteredRecipes(filtered);
+  }, [recipes, searchQuery]);
 
   const handleTagFilter = (tagName: string) => {
     if (activeTag === tagName) {
+      // Clear filter
       setActiveTag(null);
-      refetchRecipes(); // Clear search
+      refetchRecipes(); // Fetch all recipes
     } else {
+      // Apply tag filter
       setActiveTag(tagName);
-      refetchRecipes(undefined, undefined, tagName); // Search by tag
+      refetchRecipes(undefined, undefined, undefined, tagName); // Filter by tag
     }
   };
 
@@ -41,15 +60,6 @@ const Index = () => {
     setActiveTag(null);
     refetchRecipes();
   };
-
-  // Filter recipes by search query
-  const filteredRecipes = searchQuery.trim() === ""
-    ? recipes
-    : recipes.filter(recipe =>
-        recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (recipe.description && recipe.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (recipe.excerpt && recipe.excerpt.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
 
   const featuredRecipes = filteredRecipes.filter(recipe => recipe.featured);
   const trendingRecipes = filteredRecipes.filter(recipe => recipe.trending);

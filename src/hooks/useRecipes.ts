@@ -27,6 +27,7 @@ export interface Recipe {
   categories?: { id: number; name: string; slug: string }[];
   image_url?: string;
   author?: { id: number; name: string; email: string; avatar_url?: string };
+  tags?: { id: number; name: string }[];
 }
 
 export interface Category {
@@ -46,18 +47,20 @@ export const useRecipes = () => {
     categoryFilter?: string, 
     difficultyFilter?: string,
     searchQuery?: string,
+    tagFilter?: string,
     limit = 50,
     offset = 0
   ) => {
     try {
       setLoading(true);
       
-      // Use the PostgreSQL function to search recipes
+      // Use the PostgreSQL function to search recipes with proper tag filtering
       const { data: recipesData, error: recipesError } = await supabase
         .rpc('search_recipes', {
           search_query: searchQuery || '',
           category_filter: categoryFilter || null,
           difficulty_filter: difficultyFilter || null,
+          tag_filter: tagFilter || null,
           limit_count: limit,
           offset_count: offset
         });
@@ -72,6 +75,7 @@ export const useRecipes = () => {
       const transformedRecipes = Array.isArray(recipesData) ? recipesData.map((recipe: any) => ({
         ...recipe,
         categories: Array.isArray(recipe.categories) ? recipe.categories : [],
+        tags: Array.isArray(recipe.tags) ? recipe.tags : [],
         image_url: recipe.image_url ? (
           recipe.image_url.startsWith('http') 
             ? recipe.image_url 

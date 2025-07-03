@@ -2401,6 +2401,7 @@ export type Database = {
           search_query?: string
           category_filter?: string
           difficulty_filter?: string
+          tag_filter?: string
           limit_count?: number
           offset_count?: number
         }
@@ -2429,6 +2430,7 @@ export type Database = {
           categories: Json
           image_url: string
           author: Json
+          tags: Json
         }[]
       }
       set_user_as_admin: {

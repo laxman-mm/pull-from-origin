@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -12,25 +13,28 @@ function useQuery() {
 
 const SearchPage = () => {
   const query = useQuery().get("q") || "";
-  const { recipes, loading } = useRecipes();
+  const { recipes, loading, refetchRecipes } = useRecipes();
   const [filtered, setFiltered] = useState(recipes);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   useEffect(() => {
     if (!query) {
       setFiltered([]);
       return;
     }
-    const q = query.toLowerCase();
-    setFiltered(
-      recipes.filter(
-        (r) =>
-          r.title.toLowerCase().includes(q) ||
-          r.description.toLowerCase().includes(q) ||
-          (r.excerpt && r.excerpt.toLowerCase().includes(q)) ||
-          (r.author && r.author.name && r.author.name.toLowerCase().includes(q))
-      )
-    );
-  }, [query, recipes]);
+    // Use the search_recipes function instead of client-side filtering
+    refetchRecipes(undefined, undefined, query, activeTag || undefined);
+  }, [query, activeTag, refetchRecipes]);
+
+  useEffect(() => {
+    setFiltered(recipes);
+  }, [recipes]);
+
+  const handleTagFilter = (tagName: string) => {
+    const newTag = activeTag === tagName ? null : tagName;
+    setActiveTag(newTag);
+    refetchRecipes(undefined, undefined, query, newTag || undefined);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -41,7 +45,10 @@ const SearchPage = () => {
             <SearchResults results={filtered} query={query} isLoading={loading} />
           </div>
           <div className="lg:col-span-1">
-            <Sidebar />
+            <Sidebar 
+              onTagFilter={handleTagFilter}
+              activeTag={activeTag}
+            />
           </div>
         </div>
       </main>

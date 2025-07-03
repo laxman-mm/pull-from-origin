@@ -1,4 +1,4 @@
-
+import React, { useState } from 'react';
 import { UserManagementProps } from "./UserManagementTypes";
 import { UserManagementDialog } from "./UserManagementDialog";
 import { UserTable } from "./UserTable";
@@ -21,7 +21,7 @@ export function UserManagement({ onStatsUpdate }: UserManagementProps) {
     openCreateDialog,
   } = useUserManagement(onStatsUpdate);
 
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const filteredUsers = users.filter(
     (user) =>
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
