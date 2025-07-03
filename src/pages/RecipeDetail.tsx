@@ -33,6 +33,7 @@ interface Recipe {
   categories?: { id: number; name: string; slug: string }[];
   image_url?: string;
   author?: { id: number; name: string; email: string; avatar_url?: string };
+  tags?: { id: number; name: string }[];
 }
 
 // Fallback image for recipes without images
@@ -70,124 +71,51 @@ const RecipeDetail = () => {
         setIsLoading(true);
         console.log('Fetching recipe with slug:', slug);
         
+        // Use the search_recipes function to get recipe with tags
         const { data, error } = await supabase
-          .from('receipes')
-          .select(`
-            id,
-            title,
-            slug,
-            description,
-            excerpt,
-            difficulty,
-            prep_time_in_min,
-            cook_time_in_min,
-            servings,
-            featured,
-            trending,
-            created_at,
-            updated_at,
-            published_at,
-            ingredients,
-            instructions,
-            nutrition_calories,
-            nutrition_protein_in_g,
-            nutrition_carbs_in_g,
-            nutrition_fat_in_g,
-            receipes_categories_lnk!inner(
-              categories!inner(
-                id,
-                name,
-                slug
-              )
-            )
-          `)
-          .eq('slug', slug)
-          .not('published_at', 'is', null)
-          .single();
+          .rpc('search_recipes', {
+            search_query: '',
+            category_filter: null,
+            difficulty_filter: null,
+            tag_filter: null,
+            limit_count: 50,
+            offset_count: 0
+          });
 
         if (error) {
-          console.error('Error fetching recipe:', error);
+          console.error('Error fetching recipes:', error);
           setError(error.message);
           return;
         }
 
-        console.log('Fetched recipe data:', data);
-
-        // Fetch the image for this recipe
-        const { data: imageData, error: imageError } = await supabase
-          .from('files_related_mph')
-          .select(`
-            files!inner(
-              url,
-              alternative_text,
-              name
-            )
-          `)
-          .eq('related_id', data.id)
-          .eq('related_type', 'api::receipe.receipe')
-          .eq('field', 'image')
-          .limit(1)
-          .single();
-
-        let imageUrl = null;
-        if (!imageError && imageData?.files?.url) {
-          // Construct full URL if it's a relative path
-          imageUrl = imageData.files.url.startsWith('http') 
-            ? imageData.files.url 
-            : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${imageData.files.url}`;
+        // Find the recipe with matching slug
+        const foundRecipe = data?.find((r: any) => r.slug === slug);
+        
+        if (!foundRecipe) {
+          setError("Recipe not found");
+          return;
         }
 
-        // Fetch the author for this recipe
-        const { data: authorData, error: authorError } = await supabase
-          .from('receipes_author_lnk')
-          .select(`
-            authors!inner(
-              id,
-              name,
-              email
-            )
-          `)
-          .eq('receipe_id', data.id)
-          .limit(1)
-          .single();
-
-        let author = null;
-        if (!authorError && authorData?.authors) {
-          // Fetch the author's avatar image
-          const { data: authorImageData, error: authorImageError } = await supabase
-            .from('files_related_mph')
-            .select(`
-              files!inner(
-                url,
-                alternative_text,
-                name
-              )
-            `)
-            .eq('related_id', authorData.authors.id)
-            .eq('related_type', 'api::author.author')
-            .eq('field', 'avatar')
-            .limit(1)
-            .single();
-
-          let authorAvatarUrl = null;
-          if (!authorImageError && authorImageData?.files?.url) {
-            authorAvatarUrl = authorImageData.files.url.startsWith('http') 
-              ? authorImageData.files.url 
-              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${authorImageData.files.url}`;
-          }
-
-          author = {
-            ...authorData.authors,
-            avatar_url: authorAvatarUrl
-          };
-        }
+        console.log('Found recipe:', foundRecipe);
 
         // Transform the data to match our Recipe interface
         const transformedRecipe = {
-          ...data,
-          categories: data.receipes_categories_lnk?.map((link: any) => link.categories) || [],
-          image_url: imageUrl,
-          author: author
+          ...foundRecipe,
+          categories: Array.isArray(foundRecipe.categories) ? foundRecipe.categories : [],
+          tags: Array.isArray(foundRecipe.tags) ? foundRecipe.tags : [],
+          image_url: foundRecipe.image_url ? (
+            foundRecipe.image_url.startsWith('http') 
+              ? foundRecipe.image_url 
+              : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${foundRecipe.image_url}`
+          ) : null,
+          author: foundRecipe.author && Object.keys(foundRecipe.author).length > 0 ? {
+            ...foundRecipe.author,
+            avatar_url: foundRecipe.author.avatar_url ? (
+              foundRecipe.author.avatar_url.startsWith('http')
+                ? foundRecipe.author.avatar_url
+                : `https://fbtiogcqxtgzefbdrwqm.supabase.co/storage/v1/object/public/supabase/${foundRecipe.author.avatar_url}`
+            ) : null
+          } : null
         };
 
         setRecipe(transformedRecipe);
@@ -408,25 +336,22 @@ const RecipeDetail = () => {
                   </div>
                 </div>
                 
-                {/* Categories as Tags */}
+                {/* Recipe Tags - Only show actual tags from the recipe */}
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Categories</h3>
+                  <h3 className="text-sm font-medium mb-2">Recipe Tags</h3>
                   <div className="flex flex-wrap gap-2">
-                    {recipe.categories && recipe.categories.length > 0 ? (
-                      recipe.categories.map((category) => (
+                    {recipe.tags && recipe.tags.length > 0 ? (
+                      recipe.tags.map((tag) => (
                         <span 
-                          key={category.id} 
+                          key={tag.id} 
                           className="bg-secondary hover:bg-secondary/70 transition-colors text-xs px-3 py-1 rounded-full inline-flex items-center"
                         >
                           <Tag className="h-3 w-3 mr-1" />
-                          {category.name}
+                          {tag.name}
                         </span>
                       ))
                     ) : (
-                      <span className="bg-secondary text-xs px-3 py-1 rounded-full inline-flex items-center">
-                        <Tag className="h-3 w-3 mr-1" />
-                        Uncategorized
-                      </span>
+                      <span className="text-muted-foreground text-sm">No tags assigned</span>
                     )}
                   </div>
                 </div>
@@ -438,9 +363,12 @@ const RecipeDetail = () => {
               </div>
             </div>
             
-            {/* Sidebar */}
+            {/* Sidebar - Show only recipe-specific tags */}
             <div className="lg:col-span-1">
-              <Sidebar />
+              <Sidebar 
+                recipeSpecificTags={recipe.tags || []}
+                showOnlyRecipeTags={true}
+              />
             </div>
           </div>
         </div>

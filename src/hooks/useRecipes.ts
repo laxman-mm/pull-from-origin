@@ -54,7 +54,7 @@ export const useRecipes = () => {
     try {
       setLoading(true);
       
-      // Use the PostgreSQL function to search recipes with tag support
+      // Use the PostgreSQL function to search recipes with proper tag filtering
       const { data: recipesData, error: recipesError } = await supabase
         .rpc('search_recipes', {
           search_query: searchQuery || '',
