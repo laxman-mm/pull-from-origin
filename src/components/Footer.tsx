@@ -2,9 +2,24 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function Footer() {
   const { t } = useLanguage();
+  const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("name, slug")
+        .not("published_at", "is", null)
+        .order("name");
+      if (!error && data) setCategories(data);
+    }
+    fetchCategories();
+  }, []);
   
   return (
     <footer className="border-t border-border bg-secondary mt-12">
@@ -34,11 +49,17 @@ export function Footer() {
           <div>
             <h4 className="font-medium mb-4">{t("categories")}</h4>
             <ul className="space-y-2">
-              <li><Link to="/categories/breakfast" className="text-sm hover:text-primary transition-colors">{t("footer_breakfast")}</Link></li>
-              <li><Link to="/categories/lunch" className="text-sm hover:text-primary transition-colors">{t("footer_lunch")}</Link></li>
-              <li><Link to="/categories/dinner" className="text-sm hover:text-primary transition-colors">{t("footer_dinner")}</Link></li>
-              <li><Link to="/categories/dessert" className="text-sm hover:text-primary transition-colors">{t("footer_dessert")}</Link></li>
-              <li><Link to="/categories/vegan" className="text-sm hover:text-primary transition-colors">{t("footer_vegan")}</Link></li>
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <li key={cat.slug}>
+                    <Link to={`/categories?category=${encodeURIComponent(cat.slug)}`} className="text-sm hover:text-primary transition-colors">
+                      {cat.name}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground text-sm">No categories found.</li>
+              )}
             </ul>
           </div>
           
