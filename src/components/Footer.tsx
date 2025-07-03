@@ -7,18 +7,37 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function Footer() {
   const { t } = useLanguage();
-  const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
+    async function fetchCategoriesWithRecipes() {
+      // Fetch all published categories with id, name, slug
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
-        .select("name, slug")
+        .select("id, name, slug")
         .not("published_at", "is", null)
         .order("name");
-      if (!error && data) setCategories(data);
+      if (categoriesError || !categoriesData) {
+        setCategories([]);
+        return;
+      }
+      // Fetch all category links that have at least one recipe
+      const { data: linksData, error: linksError } = await supabase
+        .from("receipes_categories_lnk")
+        .select("category_id")
+        .not("category_id", "is", null)
+        .not("receipe_id", "is", null);
+      if (linksError || !linksData) {
+        setCategories([]);
+        return;
+      }
+      // Get unique category IDs that have at least one recipe
+      const categoryIdsWithRecipes = Array.from(new Set(linksData.map(link => link.category_id)));
+      // Filter categories to only those with at least one recipe
+      const filteredCategories = categoriesData.filter(cat => categoryIdsWithRecipes.includes(cat.id));
+      setCategories(filteredCategories);
     }
-    fetchCategories();
+    fetchCategoriesWithRecipes();
   }, []);
   
   return (
