@@ -2,9 +2,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
-import { Search, Menu, X, Shield } from "lucide-react";
+import { Search, Menu, X, Shield, User, LogOut, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRecipes } from "@/hooks/useRecipes";
+import { useAuth } from "@/context/AuthContext";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,6 +16,7 @@ export function Header() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { recipes } = useRecipes();
+  const { user, profile, isAdmin, signOut } = useAuth();
 
   // Filter recipes for instant search
   const filteredRecipes = searchValue.trim()
@@ -22,6 +26,11 @@ export function Header() {
         (r.excerpt && r.excerpt.toLowerCase().includes(searchValue.toLowerCase()))
       ).slice(0, 8)
     : [];
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
   
   const navItems = [
     { title: t("home"), path: "/" },
@@ -117,14 +126,52 @@ export function Header() {
               </div>
             )}
             
-            {/* Admin Link */}
-            <Link
-              to="/admin"
-              className="rounded-full p-2 hover:bg-secondary transition-colors"
-              aria-label="Admin Panel"
-            >
-              <Shield className="h-5 w-5" />
-            </Link>
+            {/* Authentication */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{profile?.full_name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{profile?.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+            )}
             
             {/* Mobile Menu Button */}
             <button
@@ -155,14 +202,49 @@ export function Header() {
                   {item.title}
                 </Link>
               ))}
-              <Link
-                to="/admin"
-                className="text-foreground hover:text-primary transition-colors font-medium text-sm py-2 flex items-center"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Admin Panel
-              </Link>
+              
+              {/* Mobile Auth Section */}
+              {user ? (
+                <>
+                  <Link
+                    to="/profile"
+                    className="text-foreground hover:text-primary transition-colors font-medium text-sm py-2 flex items-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Profile ({profile?.full_name || 'User'})
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="text-foreground hover:text-primary transition-colors font-medium text-sm py-2 flex items-center"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-foreground hover:text-primary transition-colors font-medium text-sm py-2 flex items-center text-left w-full"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="text-foreground hover:text-primary transition-colors font-medium text-sm py-2 flex items-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In
+                </Link>
+              )}
             </div>
           </nav>
         )}
