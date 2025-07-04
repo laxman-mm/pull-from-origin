@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, FileText, Settings, LogOut } from "lucide-react";
+import { Users, FileText, Settings, LogOut, Mail } from "lucide-react";
 import { UserManagement } from "./UserManagement";
 import { ContentManagement } from "./ContentManagement";
+import { NewsletterManagement } from "./NewsletterManagement";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -158,9 +159,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
         {/* Management Tabs */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="content">Content Management</TabsTrigger>
+            <TabsTrigger value="newsletter">Newsletter</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users">
@@ -169,6 +171,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           
           <TabsContent value="content">
             <ContentManagement />
+          </TabsContent>
+          
+          <TabsContent value="newsletter">
+            <NewsletterManagement />
           </TabsContent>
         </Tabs>
       </div>

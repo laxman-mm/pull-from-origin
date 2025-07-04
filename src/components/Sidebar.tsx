@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Search, Tag } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Mail, Search, Tag, Loader2 } from "lucide-react";
+import { useNewsletter } from "@/hooks/useNewsletter";
 
 const recentPosts = [
   { title: "Creamy Garlic Parmesan Pasta", slug: "creamy-garlic-parmesan-pasta" },
@@ -49,6 +49,7 @@ export function Sidebar({
   const [email, setEmail] = useState("");
   const [popularTags, setPopularTags] = useState<string[]>(fallbackTags);
   const [isLoading, setIsLoading] = useState(false);
+  const { subscribeToNewsletter, isSubmitting } = useNewsletter();
   
   // Memoize the tags to show to prevent unnecessary re-renders
   const tagsToShow = useMemo(() => {
@@ -65,6 +66,9 @@ export function Sidebar({
         try {
           setIsLoading(true);
           console.log('Fetching popular tags from database...');
+          
+          // Import supabase dynamically to avoid issues
+          const { supabase } = await import('@/integrations/supabase/client');
           
           const { data, error } = await supabase
             .from('tags')
@@ -109,12 +113,24 @@ export function Sidebar({
     // No navigation, just prevent default
   };
   
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle newsletter subscription
-    console.log("Subscribe email:", email);
-    setEmail("");
-    // Show toast notification (in a real implementation)
+    
+    if (!email.trim()) {
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return;
+    }
+    
+    const result = await subscribeToNewsletter(email.trim(), 'sidebar');
+    
+    if (result.success) {
+      setEmail("");
+    }
   };
 
   const handleTagClick = (tagName: string) => {
@@ -202,13 +218,29 @@ export function Sidebar({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={isSubmitting}
+            className={`transition-colors ${
+              email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+                ? 'border-destructive focus:border-destructive'
+                : ''
+            }`}
           />
           <Button 
             type="submit" 
-            className="w-full bg-primary hover:bg-primary/80 flex items-center justify-center gap-2"
+            disabled={isSubmitting || !email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())}
+            className="w-full bg-primary hover:bg-primary/80 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Mail className="h-4 w-4" />
-            Subscribe
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Subscribing...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4" />
+                Subscribe
+              </>
+            )}
           </Button>
         </form>
       </div>

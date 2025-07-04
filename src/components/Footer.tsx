@@ -1,9 +1,9 @@
 
 import { Link } from "react-router-dom";
-import { Mail } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NewsletterSubscription } from "./NewsletterSubscription";
 
 export function Footer() {
   const { t } = useLanguage();
@@ -83,23 +83,12 @@ export function Footer() {
           </div>
           
           <div>
-            <h4 className="font-medium mb-4">{t("subscribe")}</h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t("subscribe_text")}
-            </p>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder={t("your_email")}
-                className="bg-background px-4 py-2 text-sm rounded-l-md border border-border focus:outline-none focus:ring-1 focus:ring-primary flex-1"
-              />
-              <button
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-r-md hover:bg-primary/90 transition-colors flex items-center justify-center"
-                aria-label={t("subscribe")}
-              >
-                <Mail className="h-4 w-4" />
-              </button>
-            </div>
+            <NewsletterSubscription
+              title={t("subscribe")}
+              description={t("subscribe_text")}
+              source="footer"
+              variant="footer"
+            />
           </div>
         </div>
         
