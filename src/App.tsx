@@ -16,6 +16,7 @@ import BlogPostDetail from "./pages/BlogPostDetail";
 import Categories from "./pages/Categories";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/categories" element={<Categories />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SearchProvider>

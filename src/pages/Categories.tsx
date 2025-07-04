@@ -56,6 +56,9 @@ const Categories = () => {
     });
   };
   
+  // Filter categories to only those with at least one related recipe
+  const filteredCategories = categories.filter(category => getRecipesByCategory(category.slug).length > 0);
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -113,10 +116,10 @@ const Categories = () => {
         
         {/* Categories Content */}
         <div className="container mx-auto px-4 py-12">
-          {categories.length > 0 ? (
+          {filteredCategories.length > 0 ? (
             <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
               <TabsList className="w-full overflow-x-auto flex flex-nowrap justify-start mb-8 pb-2">
-                {categories.map(category => (
+                {filteredCategories.map(category => (
                   <TabsTrigger 
                     key={category.slug} 
                     value={category.slug}
@@ -127,7 +130,7 @@ const Categories = () => {
                 ))}
               </TabsList>
               
-              {categories.map(category => (
+              {filteredCategories.map(category => (
                 <TabsContent key={category.slug} value={category.slug}>
                   <div className="mb-8">
                     <h2 className="text-2xl md:text-3xl font-playfair font-bold mb-6">
@@ -182,15 +185,6 @@ const Categories = () => {
                         </div>
                       ))}
                     </div>
-                    
-                    {getRecipesByCategory(category.slug).length === 0 && (
-                      <div className="text-center py-12">
-                        <h3 className="text-xl font-playfair font-semibold mb-2">No recipes found</h3>
-                        <p className="text-muted-foreground">
-                          There are no recipes in this category yet.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </TabsContent>
               ))}

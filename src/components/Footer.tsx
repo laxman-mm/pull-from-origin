@@ -1,24 +1,43 @@
 
 import { Link } from "react-router-dom";
-import { Mail } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NewsletterSubscription } from "./NewsletterSubscription";
 
 export function Footer() {
   const { t } = useLanguage();
-  const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
 
   useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
+    async function fetchCategoriesWithRecipes() {
+      // Fetch all published categories with id, name, slug
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
-        .select("name, slug")
+        .select("id, name, slug")
         .not("published_at", "is", null)
         .order("name");
-      if (!error && data) setCategories(data);
+      if (categoriesError || !categoriesData) {
+        setCategories([]);
+        return;
+      }
+      // Fetch all category links that have at least one recipe
+      const { data: linksData, error: linksError } = await supabase
+        .from("receipes_categories_lnk")
+        .select("category_id")
+        .not("category_id", "is", null)
+        .not("receipe_id", "is", null);
+      if (linksError || !linksData) {
+        setCategories([]);
+        return;
+      }
+      // Get unique category IDs that have at least one recipe
+      const categoryIdsWithRecipes = Array.from(new Set(linksData.map(link => link.category_id)));
+      // Filter categories to only those with at least one recipe
+      const filteredCategories = categoriesData.filter(cat => categoryIdsWithRecipes.includes(cat.id));
+      setCategories(filteredCategories);
     }
-    fetchCategories();
+    fetchCategoriesWithRecipes();
   }, []);
   
   return (
@@ -64,23 +83,12 @@ export function Footer() {
           </div>
           
           <div>
-            <h4 className="font-medium mb-4">{t("subscribe")}</h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t("subscribe_text")}
-            </p>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder={t("your_email")}
-                className="bg-background px-4 py-2 text-sm rounded-l-md border border-border focus:outline-none focus:ring-1 focus:ring-primary flex-1"
-              />
-              <button
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-r-md hover:bg-primary/90 transition-colors flex items-center justify-center"
-                aria-label={t("subscribe")}
-              >
-                <Mail className="h-4 w-4" />
-              </button>
-            </div>
+            <NewsletterSubscription
+              title={t("subscribe")}
+              description={t("subscribe_text")}
+              source="footer"
+              variant="footer"
+            />
           </div>
         </div>
         
